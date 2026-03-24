@@ -624,19 +624,45 @@
           <div class="event-actions">
             <button onclick="deleteSelectedSchedule()" class="danger">선택 일정 삭제</button>
           </div>
-          <div class="message" id="scheduleMessage">스케줄은 브라우저에 자동 저장됩니다.</div>
+          <div class="message" id="scheduleMessage">스케줄은 Firebase에 공유 저장됩니다.</div>
         </div>
       </div>
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      updateDoc,
+      deleteDoc,
+      doc,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCvz6bttOcYmSL7JY2mgljKDfWkKyrvhyg",
+      authDomain: "schedule-74da4.firebaseapp.com",
+      projectId: "schedule-74da4",
+      storageBucket: "schedule-74da4.firebasestorage.app",
+      messagingSenderId: "520094037606",
+      appId: "1:520094037606:web:8f51c2746642a6a7549fa7",
+      measurementId: "G-4NB6BZ5SXG"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const schedulesCollection = collection(db, "schedules");
+
     const PLAYER_COUNT = 10;
     const ADMIN_CODE = 'suweet0305';
 
     let calendarYear = new Date().getFullYear();
     let calendarMonth = new Date().getMonth();
     let selectedScheduleId = null;
+    let schedulesCache = [];
 
     const categoryColors = {
       '방송': '#3b82f6',
@@ -645,6 +671,23 @@
       '힛차': '#ef4444',
       '기타': '#a855f7'
     };
+
+    window.showPage = showPage;
+    window.toggleDarkMode = toggleDarkMode;
+    window.toggleAdminLock = toggleAdminLock;
+    window.handleHeroImageUpload = handleHeroImageUpload;
+    window.resetHeroImage = resetHeroImage;
+    window.shuffleTeams = shuffleTeams;
+    window.copyTeams = copyTeams;
+    window.resetPlayers = resetPlayers;
+    window.openScheduleFormForToday = openScheduleFormForToday;
+    window.changeMonth = changeMonth;
+    window.selectCalendarDate = selectCalendarDate;
+    window.clearScheduleInputs = clearScheduleInputs;
+    window.saveScheduleFromForm = saveScheduleFromForm;
+    window.editScheduleById = editScheduleById;
+    window.deleteSelectedSchedule = deleteSelectedSchedule;
+    window.requireAdmin = requireAdmin;
 
     function isAdminUnlocked() {
       return localStorage.getItem('adminUnlocked') === 'true';
@@ -714,6 +757,7 @@
       }
       const file = event.target.files && event.target.files[0];
       if (!file) return;
+
       const reader = new FileReader();
       reader.onload = function(e) {
         const result = e.target.result;
@@ -848,6 +892,7 @@
       if (!requireAdmin('팀 복사')) return;
       const team1Items = Array.from(document.querySelectorAll('#team1 li')).map(li => li.textContent.trim());
       const team2Items = Array.from(document.querySelectorAll('#team2 li')).map(li => li.textContent.trim());
+
       if (team1Items.length !== 5 || team2Items.length !== 5) {
         alert('먼저 팀을 섞어주세요.');
         return;
@@ -874,11 +919,29 @@
     }
 
     function getSchedules() {
-      return JSON.parse(localStorage.getItem('schedules') || '[]');
+      return schedulesCache;
     }
 
-    function saveSchedules(data) {
-      localStorage.setItem('schedules', JSON.stringify(data));
+    function startScheduleSync() {
+      onSnapshot(schedulesCollection, (snapshot) => {
+        schedulesCache = snapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data()
+        }));
+        renderCalendar();
+        updateHitchaCount();
+      }, (error) => {
+        console.error(error);
+        document.getElementById('scheduleMessage').textContent = 'Firebase 연결 오류가 발생했습니다.';
+      });
+    }
+
+    function updateHitchaCount() {
+      const schedules = getSchedules();
+      const targetMonth = String(calendarMonth + 1).padStart(2, '0');
+      const targetYear = String(calendarYear);
+      const count = schedules.filter(item => item.category === '힛차' && item.date && item.date.startsWith(`${targetYear}-${targetMonth}-`)).length;
+      document.getElementById('hitchaCount').textContent = `이번달 힛차 ${count}회`;
     }
 
     function formatDateKey(year, month, day) {
@@ -902,14 +965,6 @@
         calendarYear += 1;
       }
       renderCalendar();
-    }
-
-    function updateHitchaCount() {
-      const schedules = getSchedules();
-      const targetMonth = String(calendarMonth + 1).padStart(2, '0');
-      const targetYear = String(calendarYear);
-      const count = schedules.filter(item => item.category === '힛차' && item.date.startsWith(`${targetYear}-${targetMonth}-`)).length;
-      document.getElementById('hitchaCount').textContent = `이번달 힛차 ${count}회`;
     }
 
     function renderCalendar() {
@@ -957,9 +1012,9 @@
         dayCell.onclick = () => selectCalendarDate(dateKey);
 
         const eventHtml = events.slice(0, 3).map(event => `
-          <div class="event-item" onclick="event.stopPropagation(); editScheduleById('${event.id}')">
+          <div class="event-item" onclick="event.stopPropagation(); window.editScheduleById('${event.id}')">
             <span class="event-bullet" style="background:${categoryColors[event.category] || '#a855f7'}"></span>
-            <span>${event.text}</span>
+            <span>${event.text || ''}</span>
             <span class="event-time">${event.time || ''}</span>
           </div>
         `).join('');
@@ -999,8 +1054,9 @@
       document.getElementById('scheduleMessage').textContent = '입력값을 초기화했습니다.';
     }
 
-    function saveScheduleFromForm() {
+    async function saveScheduleFromForm() {
       if (!requireAdmin('일정 저장')) return;
+
       const date = document.getElementById('scheduleDate').value;
       const time = document.getElementById('scheduleTime').value;
       const text = document.getElementById('scheduleText').value.trim();
@@ -1011,27 +1067,21 @@
         return;
       }
 
-      const schedules = getSchedules();
-      if (selectedScheduleId) {
-        const index = schedules.findIndex(item => item.id === selectedScheduleId);
-        if (index !== -1) {
-          schedules[index] = { ...schedules[index], date, time, text, category };
-          document.getElementById('scheduleMessage').textContent = '일정을 수정했습니다.';
-        }
-      } else {
-        schedules.push({
-          id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          date,
-          time,
-          text,
-          category
-        });
-        document.getElementById('scheduleMessage').textContent = '일정을 추가했습니다.';
-      }
+      const payload = { date, time, text, category };
 
-      saveSchedules(schedules);
-      clearScheduleInputs();
-      renderCalendar();
+      try {
+        if (selectedScheduleId) {
+          await updateDoc(doc(db, "schedules", selectedScheduleId), payload);
+          document.getElementById('scheduleMessage').textContent = '일정을 수정했습니다.';
+        } else {
+          await addDoc(schedulesCollection, payload);
+          document.getElementById('scheduleMessage').textContent = '일정을 추가했습니다.';
+        }
+        clearScheduleInputs();
+      } catch (error) {
+        console.error(error);
+        alert('일정 저장 중 오류가 발생했습니다.');
+      }
     }
 
     function editScheduleById(id) {
@@ -1039,32 +1089,37 @@
       const item = getSchedules().find(v => v.id === id);
       if (!item) return;
       selectedScheduleId = id;
-      document.getElementById('scheduleDate').value = item.date;
+      document.getElementById('scheduleDate').value = item.date || '';
       document.getElementById('scheduleTime').value = item.time || '';
-      document.getElementById('scheduleText').value = item.text;
+      document.getElementById('scheduleText').value = item.text || '';
       document.getElementById('scheduleCategory').value = item.category || '기타';
       document.getElementById('scheduleMessage').textContent = '선택한 일정이 입력창에 불러와졌습니다. 수정 후 저장을 눌러주세요.';
     }
 
-    function deleteSelectedSchedule() {
+    async function deleteSelectedSchedule() {
       if (!requireAdmin('일정 삭제')) return;
+
       if (!selectedScheduleId) {
         alert('먼저 수정할 일정 하나를 선택해주세요.');
         return;
       }
       if (!confirm('선택한 일정을 삭제할까요?')) return;
-      const schedules = getSchedules().filter(item => item.id !== selectedScheduleId);
-      saveSchedules(schedules);
-      clearScheduleInputs();
-      renderCalendar();
-      document.getElementById('scheduleMessage').textContent = '선택한 일정을 삭제했습니다.';
+
+      try {
+        await deleteDoc(doc(db, "schedules", selectedScheduleId));
+        clearScheduleInputs();
+        document.getElementById('scheduleMessage').textContent = '선택한 일정을 삭제했습니다.';
+      } catch (error) {
+        console.error(error);
+        alert('일정 삭제 중 오류가 발생했습니다.');
+      }
     }
 
     applySavedTheme();
     updateAdminButton();
     loadHeroImage();
     loadPlayers();
-    renderCalendar();
+    startScheduleSync();
   </script>
 </body>
 </html>
