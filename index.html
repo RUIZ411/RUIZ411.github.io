@@ -498,6 +498,7 @@
           <div class="calendar-actions">
             <button class="secondary" onclick="showPage('homePage')">메인으로</button>
             <button class="primary" onclick="openScheduleFormForToday()">일정 등록</button>
+            <div class="calendar-chip" id="hitchaCount">이번달 힛차 0회</div>
           </div>
         </div>
 
@@ -512,7 +513,7 @@
             <span><span class="legend-dot" style="background:#3b82f6"></span>방송</span>
             <span><span class="legend-dot" style="background:#22c55e"></span>방송예정</span>
             <span><span class="legend-dot" style="background:#06b6d4"></span>합방</span>
-            <span><span class="legend-dot" style="background:#ef4444"></span>휴방</span>
+            <span><span class="legend-dot" style="background:#ef4444"></span>힛차</span>
             <span><span class="legend-dot" style="background:#a855f7"></span>기타</span>
           </div>
           <div class="calendar-chip">날짜를 누르면 해당 날짜로 바로 입력됩니다.</div>
@@ -540,7 +541,7 @@
               <option value="방송">방송</option>
               <option value="방송예정">방송예정</option>
               <option value="합방">합방</option>
-              <option value="휴방">휴방</option>
+              <option value="힛차">힛차</option>
               <option value="기타">기타</option>
             </select>
             <input type="text" id="scheduleText" placeholder="예: 합방 / 개인방송 / 휴방 공지">
@@ -566,7 +567,7 @@
       '방송': '#3b82f6',
       '방송예정': '#22c55e',
       '합방': '#06b6d4',
-      '휴방': '#ef4444',
+      '힛차': '#ef4444',
       '기타': '#a855f7'
     };
 
@@ -726,11 +727,20 @@
       renderCalendar();
     }
 
+    function updateHitchaCount() {
+      const schedules = getSchedules();
+      const targetMonth = String(calendarMonth + 1).padStart(2, '0');
+      const targetYear = String(calendarYear);
+      const count = schedules.filter(item => item.category === '힛차' && item.date.startsWith(`${targetYear}-${targetMonth}-`)).length;
+      document.getElementById('hitchaCount').textContent = `이번달 힛차 ${count}회`;
+    }
+
     function renderCalendar() {
       const label = document.getElementById('calendarLabel');
       const daysContainer = document.getElementById('calendarDays');
       label.textContent = `${calendarYear}년 ${calendarMonth + 1}월`;
       daysContainer.innerHTML = '';
+      updateHitchaCount();
 
       const firstDay = new Date(calendarYear, calendarMonth, 1);
       const startWeekday = firstDay.getDay();
