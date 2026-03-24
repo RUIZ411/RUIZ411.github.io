@@ -137,7 +137,7 @@
     }
     .menu-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 18px;
       margin-top: 24px;
     }
@@ -206,6 +206,7 @@
       font-family: inherit;
       background: rgba(255,255,255,0.9);
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      color: var(--text);
     }
     input:focus, textarea:focus, select:focus {
       outline: none;
@@ -265,7 +266,6 @@
       border: 1px solid rgba(255,255,255,0.08);
     }
 
-    /* Calendar page */
     .calendar-page {
       background: linear-gradient(180deg, #05070c, #0a0f18 55%, #0b1220);
       color: #f8fafc;
@@ -515,6 +515,7 @@
         <div class="menu-grid">
           <button class="menu-btn" onclick="showPage('teamPage')">팀 섞기</button>
           <button class="menu-btn" onclick="showPage('schedulePage')">스케줄</button>
+          <button class="menu-btn" onclick="showPage('recordPage')">킬내기 전적</button>
         </div>
       </div>
     </div>
@@ -617,22 +618,166 @@
               <option value="힛차">힛차</option>
               <option value="기타">기타</option>
             </select>
-            <input type="text" id="scheduleText" placeholder="예: 합방 / 개인방송 / 휴방 공지">
+            <input type="text" id="scheduleText" placeholder="예: 합방 / 개인방송 / 힛차 공지">
             <button class="primary" onclick="saveScheduleFromForm()">저장</button>
             <button class="secondary" onclick="clearScheduleInputs()">초기화</button>
           </div>
           <div class="event-actions">
             <button onclick="deleteSelectedSchedule()" class="danger">선택 일정 삭제</button>
           </div>
-          <div class="message" id="scheduleMessage">스케줄은 브라우저에 자동 저장됩니다.</div>
+          <div class="message" id="scheduleMessage">스케줄은 Firebase에 공유 저장됩니다.</div>
         </div>
+      </div>
+    </div>
+
+    <div id="recordPage" class="page">
+      <div class="card">
+        <div class="top-bar">
+          <button class="secondary" onclick="showPage('homePage')">메인으로</button>
+        </div>
+        <h2>킬내기 전적</h2>
+        <div class="desc">전적을 직접 추가하고, 승률과 전적 요약을 한 화면에서 관리할 수 있습니다.</div>
+
+        <div class="record-summary" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;margin-bottom:18px;">
+          <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:20px;padding:20px;border:1px solid #f5d77b;">
+            <div style="font-size:18px;font-weight:800;margin-bottom:8px;">26년 정수히 킬내기 전적</div>
+            <div style="color:#6b7280;font-size:14px;line-height:1.5;">전적을 입력하면 전체 승률과 펀딩 승률이 자동 계산됩니다.</div>
+          </div>
+          <div class="message" style="margin:0;">
+            <div style="font-weight:800;margin-bottom:4px;">전체 승률</div>
+            <div id="overallRecord">0승 0패</div>
+            <div id="overallRate">0.00%</div>
+          </div>
+          <div class="message" style="margin:0;">
+            <div style="font-weight:800;margin-bottom:4px;">짝궁</div>
+            <div id="partnerRecord">0승 0패</div>
+            <div id="partnerRate">0.00%</div>
+          </div>
+          <div class="message" style="margin:0; background:rgba(168,85,247,0.08); color:#6d28d9; border-color:rgba(168,85,247,0.14);">
+            <div style="font-weight:800;margin-bottom:4px;">펀딩 승률</div>
+            <div id="fundingRecord">0승 0패</div>
+            <div id="fundingRate">0.00%</div>
+          </div>
+        </div>
+
+        <div class="record-form" style="display:grid;grid-template-columns:90px 120px 120px 90px 90px 120px 1fr 1fr 100px 120px 120px;gap:10px;margin-bottom:18px;align-items:start;">
+          <input type="number" id="recordRound" placeholder="횟수">
+          <input type="date" id="recordDate">
+          <select id="recordType">
+            <option value="랜드">랜드</option>
+            <option value="공장">공장</option>
+            <option value="킬내기">킬내기</option>
+            <option value="펀딩">펀딩</option>
+          </select>
+          <input type="number" id="recordNp" placeholder="N파">
+          <select id="recordResult">
+            <option value="승">승</option>
+            <option value="패">패</option>
+          </select>
+          <input type="text" id="recordPartner" placeholder="짝궁">
+          <input type="text" id="recordMyTeam" placeholder="같은 팀 (쉼표로 구분)">
+          <input type="text" id="recordEnemyTeam" placeholder="상대 팀 (쉼표로 구분)">
+          <input type="text" id="recordRank" placeholder="순위">
+          <input type="text" id="recordBalance" placeholder="밸런스">
+          <input type="text" id="recordProfit" placeholder="순수킬 (예: 32 (50-18))">
+        </div>
+
+        <div class="btn-row">
+          <button class="primary" onclick="saveRecord()">전적 저장</button>
+          <button class="secondary" onclick="clearRecordInputs()">입력 초기화</button>
+          <button class="danger" onclick="deleteSelectedRecord()">선택 전적 삭제</button>
+        </div>
+
+        <div style="overflow:auto; border-radius:18px; border:1px solid var(--line); background:rgba(255,255,255,0.75);">
+          <table style="width:100%; border-collapse:collapse; min-width:1300px;">
+            <thead>
+              <tr style="background:rgba(59,130,246,0.08);">
+                <th style="padding:12px;border-bottom:1px solid var(--line);">횟수</th>
+                <th style="padding:12px;border-bottom:1px solid var(--line);">날짜</th>
+                <th style="padding:12px;border-bottom:1px solid var(--line);">종류</th>
+                <th style="padding:12px;border-bottom:1px solid var(--line);">N파</th>
+                <th style="padding:12px;border-bottom:1px solid var(--line);">결과</th>
+                <th style="padding:12px;border-bottom:1px solid var(--line);">짝궁</th>
+                <th style="padding:12px;border-bottom:1px solid var(--line);">같은 팀</th>
+                <th style="padding:12px;border-bottom:1px solid var(--line);">상대 팀</th>
+                <th style="padding:12px;border-bottom:1px solid var(--line);">순위</th>
+                <th style="padding:12px;border-bottom:1px solid var(--line);">밸런스</th>
+                <th style="padding:12px;border-bottom:1px solid var(--line);">순수킬</th>
+                <th style="padding:12px;border-bottom:1px solid var(--line);">관리</th>
+              </tr>
+            </thead>
+            <tbody id="recordTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="message" id="recordMessage" style="margin-top:14px;">전적은 브라우저에 자동 저장됩니다.</div>
       </div>
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      updateDoc,
+      deleteDoc,
+      doc,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCvz6bttOcYmSL7JY2mgljKDfWkKyrvhyg",
+      authDomain: "schedule-74da4.firebaseapp.com",
+      projectId: "schedule-74da4",
+      storageBucket: "schedule-74da4.firebasestorage.app",
+      messagingSenderId: "520094037606",
+      appId: "1:520094037606:web:8f51c2746642a6a7549fa7",
+      measurementId: "G-4NB6BZ5SXG"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const schedulesCollection = collection(db, "schedules");
+
     const PLAYER_COUNT = 10;
     const ADMIN_CODE = 'suweet0305';
+
+    let calendarYear = new Date().getFullYear();
+    let calendarMonth = new Date().getMonth();
+    let selectedScheduleId = null;
+    let selectedRecordId = null;
+    let schedulesCache = [];
+
+    const categoryColors = {
+      '방송': '#3b82f6',
+      '방송예정': '#22c55e',
+      '합방': '#06b6d4',
+      '힛차': '#ef4444',
+      '기타': '#a855f7'
+    };
+
+    window.showPage = showPage;
+    window.toggleDarkMode = toggleDarkMode;
+    window.toggleAdminLock = toggleAdminLock;
+    window.handleHeroImageUpload = handleHeroImageUpload;
+    window.resetHeroImage = resetHeroImage;
+    window.shuffleTeams = shuffleTeams;
+    window.copyTeams = copyTeams;
+    window.resetPlayers = resetPlayers;
+    window.openScheduleFormForToday = openScheduleFormForToday;
+    window.changeMonth = changeMonth;
+    window.selectCalendarDate = selectCalendarDate;
+    window.clearScheduleInputs = clearScheduleInputs;
+    window.saveScheduleFromForm = saveScheduleFromForm;
+    window.editScheduleById = editScheduleById;
+    window.deleteSelectedSchedule = deleteSelectedSchedule;
+    window.saveRecord = saveRecord;
+    window.clearRecordInputs = clearRecordInputs;
+    window.deleteSelectedRecord = deleteSelectedRecord;
+    window.editRecord = editRecord;
+    window.requireAdmin = requireAdmin;
 
     function isAdminUnlocked() {
       return localStorage.getItem('adminUnlocked') === 'true';
@@ -659,6 +804,7 @@
 
       const code = prompt('관리자 코드를 입력하세요.');
       if (code === null) return;
+
       if (code === ADMIN_CODE) {
         localStorage.setItem('adminUnlocked', 'true');
         updateAdminButton();
@@ -667,17 +813,6 @@
         alert('관리자 코드가 올바르지 않습니다.');
       }
     }
-    let calendarYear = new Date().getFullYear();
-    let calendarMonth = new Date().getMonth();
-    let selectedScheduleId = null;
-
-    const categoryColors = {
-      '방송': '#3b82f6',
-      '방송예정': '#22c55e',
-      '합방': '#06b6d4',
-      '힛차': '#ef4444',
-      '기타': '#a855f7'
-    };
 
     function applySavedTheme() {
       const savedTheme = localStorage.getItem('themeMode') || 'light';
@@ -712,6 +847,7 @@
       }
       const file = event.target.files && event.target.files[0];
       if (!file) return;
+
       const reader = new FileReader();
       reader.onload = function(e) {
         const result = e.target.result;
@@ -734,15 +870,21 @@
       document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
       document.getElementById(pageId).classList.add('active');
       if (pageId === 'schedulePage') renderCalendar();
+      if (pageId === 'recordPage') renderRecords();
     }
 
     function getInputs() {
       return [
-        document.getElementById('player1'), document.getElementById('player2'),
-        document.getElementById('player3'), document.getElementById('player4'),
-        document.getElementById('player5'), document.getElementById('player6'),
-        document.getElementById('player7'), document.getElementById('player8'),
-        document.getElementById('player9'), document.getElementById('player10')
+        document.getElementById('player1'),
+        document.getElementById('player2'),
+        document.getElementById('player3'),
+        document.getElementById('player4'),
+        document.getElementById('player5'),
+        document.getElementById('player6'),
+        document.getElementById('player7'),
+        document.getElementById('player8'),
+        document.getElementById('player9'),
+        document.getElementById('player10')
       ];
     }
 
@@ -762,7 +904,6 @@
 
     function resetPlayers() {
       if (!requireAdmin('멤버 초기화')) return;
-      if (!confirm('저장된 멤버를 초기화할까요?')) return;
       localStorage.removeItem('players');
       localStorage.removeItem('lastTeams');
       getInputs().forEach(input => input.value = '');
@@ -825,9 +966,11 @@
         result = makeTeams(players);
         attempts++;
       } while (previousResult && countChangedLines(result, previousResult) < 2 && attempts < 50);
+
       displayTeam('team1', result.team1);
       displayTeam('team2', result.team2);
       localStorage.setItem('lastTeams', JSON.stringify(result));
+
       if (!previousResult) {
         document.getElementById('teamMessage').textContent = '팀이 섞였습니다.';
       } else {
@@ -839,14 +982,21 @@
       if (!requireAdmin('팀 복사')) return;
       const team1Items = Array.from(document.querySelectorAll('#team1 li')).map(li => li.textContent.trim());
       const team2Items = Array.from(document.querySelectorAll('#team2 li')).map(li => li.textContent.trim());
+
       if (team1Items.length !== 5 || team2Items.length !== 5) {
         alert('먼저 팀을 섞어주세요.');
         return;
       }
+
       let text = '블루\t레드\n';
-      for (let i = 0; i < 5; i++) text += `${team1Items[i]}\t${team2Items[i]}\n`;
+      for (let i = 0; i < 5; i++) {
+        text += `${team1Items[i]}\t${team2Items[i]}\n`;
+      }
+
       navigator.clipboard.writeText(text)
-        .then(() => { document.getElementById('teamMessage').textContent = '블루 / 레드 형식으로 복사되었습니다.'; })
+        .then(() => {
+          document.getElementById('teamMessage').textContent = '블루 / 레드 형식으로 복사되었습니다.';
+        })
         .catch(() => {
           const textarea = document.createElement('textarea');
           textarea.value = text;
@@ -859,11 +1009,26 @@
     }
 
     function getSchedules() {
-      return JSON.parse(localStorage.getItem('schedules') || '[]');
+      return schedulesCache;
     }
 
-    function saveSchedules(data) {
-      localStorage.setItem('schedules', JSON.stringify(data));
+    function startScheduleSync() {
+      onSnapshot(schedulesCollection, (snapshot) => {
+        schedulesCache = snapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data()
+        }));
+        renderCalendar();
+        updateHitchaCount();
+      });
+    }
+
+    function updateHitchaCount() {
+      const schedules = getSchedules();
+      const targetMonth = String(calendarMonth + 1).padStart(2, '0');
+      const targetYear = String(calendarYear);
+      const count = schedules.filter(item => item.category === '힛차' && item.date && item.date.startsWith(`${targetYear}-${targetMonth}-`)).length;
+      document.getElementById('hitchaCount').textContent = `이번달 힛차 ${count}회`;
     }
 
     function formatDateKey(year, month, day) {
@@ -887,14 +1052,6 @@
         calendarYear += 1;
       }
       renderCalendar();
-    }
-
-    function updateHitchaCount() {
-      const schedules = getSchedules();
-      const targetMonth = String(calendarMonth + 1).padStart(2, '0');
-      const targetYear = String(calendarYear);
-      const count = schedules.filter(item => item.category === '힛차' && item.date.startsWith(`${targetYear}-${targetMonth}-`)).length;
-      document.getElementById('hitchaCount').textContent = `이번달 힛차 ${count}회`;
     }
 
     function renderCalendar() {
@@ -942,9 +1099,9 @@
         dayCell.onclick = () => selectCalendarDate(dateKey);
 
         const eventHtml = events.slice(0, 3).map(event => `
-          <div class="event-item" onclick="event.stopPropagation(); editScheduleById('${event.id}')">
+          <div class="event-item" onclick="event.stopPropagation(); window.editScheduleById('${event.id}')">
             <span class="event-bullet" style="background:${categoryColors[event.category] || '#a855f7'}"></span>
-            <span>${event.text}</span>
+            <span>${event.text || ''}</span>
             <span class="event-time">${event.time || ''}</span>
           </div>
         `).join('');
@@ -984,8 +1141,9 @@
       document.getElementById('scheduleMessage').textContent = '입력값을 초기화했습니다.';
     }
 
-    function saveScheduleFromForm() {
+    async function saveScheduleFromForm() {
       if (!requireAdmin('일정 저장')) return;
+
       const date = document.getElementById('scheduleDate').value;
       const time = document.getElementById('scheduleTime').value;
       const text = document.getElementById('scheduleText').value.trim();
@@ -996,27 +1154,21 @@
         return;
       }
 
-      const schedules = getSchedules();
-      if (selectedScheduleId) {
-        const index = schedules.findIndex(item => item.id === selectedScheduleId);
-        if (index !== -1) {
-          schedules[index] = { ...schedules[index], date, time, text, category };
-          document.getElementById('scheduleMessage').textContent = '일정을 수정했습니다.';
-        }
-      } else {
-        schedules.push({
-          id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          date,
-          time,
-          text,
-          category
-        });
-        document.getElementById('scheduleMessage').textContent = '일정을 추가했습니다.';
-      }
+      const payload = { date, time, text, category };
 
-      saveSchedules(schedules);
-      clearScheduleInputs();
-      renderCalendar();
+      try {
+        if (selectedScheduleId) {
+          await updateDoc(doc(db, "schedules", selectedScheduleId), payload);
+          document.getElementById('scheduleMessage').textContent = '일정을 수정했습니다.';
+        } else {
+          await addDoc(schedulesCollection, payload);
+          document.getElementById('scheduleMessage').textContent = '일정을 추가했습니다.';
+        }
+        clearScheduleInputs();
+      } catch (error) {
+        console.error(error);
+        alert('일정 저장 중 오류가 발생했습니다.');
+      }
     }
 
     function editScheduleById(id) {
@@ -1024,32 +1176,205 @@
       const item = getSchedules().find(v => v.id === id);
       if (!item) return;
       selectedScheduleId = id;
-      document.getElementById('scheduleDate').value = item.date;
+      document.getElementById('scheduleDate').value = item.date || '';
       document.getElementById('scheduleTime').value = item.time || '';
-      document.getElementById('scheduleText').value = item.text;
+      document.getElementById('scheduleText').value = item.text || '';
       document.getElementById('scheduleCategory').value = item.category || '기타';
       document.getElementById('scheduleMessage').textContent = '선택한 일정이 입력창에 불러와졌습니다. 수정 후 저장을 눌러주세요.';
     }
 
-    function deleteSelectedSchedule() {
+    async function deleteSelectedSchedule() {
       if (!requireAdmin('일정 삭제')) return;
+
       if (!selectedScheduleId) {
         alert('먼저 수정할 일정 하나를 선택해주세요.');
         return;
       }
       if (!confirm('선택한 일정을 삭제할까요?')) return;
-      const schedules = getSchedules().filter(item => item.id !== selectedScheduleId);
-      saveSchedules(schedules);
-      clearScheduleInputs();
-      renderCalendar();
-      document.getElementById('scheduleMessage').textContent = '선택한 일정을 삭제했습니다.';
+
+      try {
+        await deleteDoc(doc(db, "schedules", selectedScheduleId));
+        clearScheduleInputs();
+        document.getElementById('scheduleMessage').textContent = '선택한 일정을 삭제했습니다.';
+      } catch (error) {
+        console.error(error);
+        alert('일정 삭제 중 오류가 발생했습니다.');
+      }
+    }
+
+    function getRecords() {
+      return JSON.parse(localStorage.getItem('killRecords') || '[]');
+    }
+
+    function saveRecords(data) {
+      localStorage.setItem('killRecords', JSON.stringify(data));
+    }
+
+    function clearRecordInputs() {
+      document.getElementById('recordRound').value = '';
+      document.getElementById('recordDate').value = '';
+      document.getElementById('recordType').value = '랜드';
+      document.getElementById('recordNp').value = '';
+      document.getElementById('recordResult').value = '승';
+      document.getElementById('recordPartner').value = '';
+      document.getElementById('recordMyTeam').value = '';
+      document.getElementById('recordEnemyTeam').value = '';
+      document.getElementById('recordRank').value = '';
+      document.getElementById('recordBalance').value = '';
+      document.getElementById('recordProfit').value = '';
+      selectedRecordId = null;
+      document.getElementById('recordMessage').textContent = '입력값을 초기화했습니다.';
+    }
+
+    function updateRecordSummary() {
+      const records = getRecords();
+      const wins = records.filter(r => r.result === '승').length;
+      const losses = records.filter(r => r.result === '패').length;
+      const total = wins + losses;
+      const overallRate = total ? ((wins / total) * 100).toFixed(2) : '0.00';
+
+      const funding = records.filter(r => r.type === '펀딩');
+      const fundingWins = funding.filter(r => r.result === '승').length;
+      const fundingLosses = funding.filter(r => r.result === '패').length;
+      const fundingTotal = fundingWins + fundingLosses;
+      const fundingRate = fundingTotal ? ((fundingWins / fundingTotal) * 100).toFixed(2) : '0.00';
+
+      const partnerMap = {};
+      records.forEach(r => {
+        if (!r.partner) return;
+        if (!partnerMap[r.partner]) partnerMap[r.partner] = { win: 0, loss: 0 };
+        if (r.result === '승') partnerMap[r.partner].win += 1;
+        else partnerMap[r.partner].loss += 1;
+      });
+
+      let bestPartner = { name: '-', win: 0, loss: 0, rate: '0.00' };
+      Object.entries(partnerMap).forEach(([name, value]) => {
+        const totalCount = value.win + value.loss;
+        const rate = totalCount ? (value.win / totalCount) * 100 : 0;
+        if (totalCount > 0 && rate >= Number(bestPartner.rate)) {
+          bestPartner = { name, win: value.win, loss: value.loss, rate: rate.toFixed(2) };
+        }
+      });
+
+      document.getElementById('overallRecord').textContent = `${wins}승 ${losses}패`;
+      document.getElementById('overallRate').textContent = `${overallRate}%`;
+      document.getElementById('fundingRecord').textContent = `${fundingWins}승 ${fundingLosses}패`;
+      document.getElementById('fundingRate').textContent = `${fundingRate}%`;
+      document.getElementById('partnerRecord').textContent = `${bestPartner.name} · ${bestPartner.win}승 ${bestPartner.loss}패`;
+      document.getElementById('partnerRate').textContent = `${bestPartner.rate}%`;
+    }
+
+    function renderRecords() {
+      const tbody = document.getElementById('recordTableBody');
+      const records = getRecords().sort((a, b) => Number(a.round || 0) - Number(b.round || 0));
+      tbody.innerHTML = '';
+
+      if (records.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="12" style="padding:22px; text-align:center; color:var(--muted);">등록된 전적이 없습니다.</td></tr>`;
+        updateRecordSummary();
+        return;
+      }
+
+      records.forEach(record => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="padding:10px;border-top:1px solid var(--line);">${record.round || ''}</td>
+          <td style="padding:10px;border-top:1px solid var(--line);">${record.date || ''}</td>
+          <td style="padding:10px;border-top:1px solid var(--line);">${record.type || ''}</td>
+          <td style="padding:10px;border-top:1px solid var(--line);">${record.np || ''}</td>
+          <td style="padding:10px;border-top:1px solid var(--line); font-weight:800; color:${record.result === '승' ? '#2563eb' : '#dc2626'};">${record.result || ''}</td>
+          <td style="padding:10px;border-top:1px solid var(--line);">${record.partner || ''}</td>
+          <td style="padding:10px;border-top:1px solid var(--line);">${record.myTeam || ''}</td>
+          <td style="padding:10px;border-top:1px solid var(--line);">${record.enemyTeam || ''}</td>
+          <td style="padding:10px;border-top:1px solid var(--line);">${record.rank || ''}</td>
+          <td style="padding:10px;border-top:1px solid var(--line);">${record.balance || ''}</td>
+          <td style="padding:10px;border-top:1px solid var(--line);">${record.profit || ''}</td>
+          <td style="padding:10px;border-top:1px solid var(--line);">
+            <button class="secondary" onclick="window.editRecord('${record.id}')">수정</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      updateRecordSummary();
+    }
+
+    function saveRecord() {
+      if (!requireAdmin('전적 저장')) return;
+      const record = {
+        id: selectedRecordId || `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        round: document.getElementById('recordRound').value.trim(),
+        date: document.getElementById('recordDate').value.trim(),
+        type: document.getElementById('recordType').value,
+        np: document.getElementById('recordNp').value.trim(),
+        result: document.getElementById('recordResult').value,
+        partner: document.getElementById('recordPartner').value.trim(),
+        myTeam: document.getElementById('recordMyTeam').value.trim(),
+        enemyTeam: document.getElementById('recordEnemyTeam').value.trim(),
+        rank: document.getElementById('recordRank').value.trim(),
+        balance: document.getElementById('recordBalance').value.trim(),
+        profit: document.getElementById('recordProfit').value.trim()
+      };
+
+      if (!record.round || !record.date) {
+        alert('횟수와 날짜는 입력해주세요.');
+        return;
+      }
+
+      const records = getRecords();
+      const index = records.findIndex(r => r.id === record.id);
+      if (index >= 0) {
+        records[index] = record;
+        document.getElementById('recordMessage').textContent = '전적을 수정했습니다.';
+      } else {
+        records.push(record);
+        document.getElementById('recordMessage').textContent = '전적을 저장했습니다.';
+      }
+      saveRecords(records);
+      clearRecordInputs();
+      renderRecords();
+    }
+
+    function editRecord(id) {
+      if (!requireAdmin('전적 수정')) return;
+      const record = getRecords().find(r => r.id === id);
+      if (!record) return;
+      selectedRecordId = id;
+      document.getElementById('recordRound').value = record.round || '';
+      document.getElementById('recordDate').value = record.date || '';
+      document.getElementById('recordType').value = record.type || '랜드';
+      document.getElementById('recordNp').value = record.np || '';
+      document.getElementById('recordResult').value = record.result || '승';
+      document.getElementById('recordPartner').value = record.partner || '';
+      document.getElementById('recordMyTeam').value = record.myTeam || '';
+      document.getElementById('recordEnemyTeam').value = record.enemyTeam || '';
+      document.getElementById('recordRank').value = record.rank || '';
+      document.getElementById('recordBalance').value = record.balance || '';
+      document.getElementById('recordProfit').value = record.profit || '';
+      document.getElementById('recordMessage').textContent = '전적을 불러왔습니다. 수정 후 전적 저장을 눌러주세요.';
+    }
+
+    function deleteSelectedRecord() {
+      if (!requireAdmin('전적 삭제')) return;
+      if (!selectedRecordId) {
+        alert('먼저 수정할 전적 하나를 선택해주세요.');
+        return;
+      }
+      if (!confirm('선택한 전적을 삭제할까요?')) return;
+      const records = getRecords().filter(r => r.id !== selectedRecordId);
+      saveRecords(records);
+      clearRecordInputs();
+      renderRecords();
+      document.getElementById('recordMessage').textContent = '전적을 삭제했습니다.';
     }
 
     applySavedTheme();
     updateAdminButton();
     loadHeroImage();
     loadPlayers();
+    startScheduleSync();
     renderCalendar();
+    renderRecords();
   </script>
 </body>
 </html>
