@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>팀 섞기 / 스케줄</title>
+  <title>SUWEET TOOL</title>
   <style>
     * { box-sizing: border-box; }
     :root {
@@ -31,12 +31,10 @@
     }
     .app {
       width: 100%;
-      max-width: 1024px;
+      max-width: 1200px;
       margin: 0 auto;
     }
-    .page {
-      display: none;
-    }
+    .page { display: none; }
     .page.active {
       display: block;
       animation: fadeIn 0.28s ease;
@@ -108,6 +106,7 @@
       gap: 10px;
       margin-bottom: 18px;
       flex-wrap: wrap;
+      align-items: center;
     }
     button {
       border: none;
@@ -117,9 +116,7 @@
       cursor: pointer;
       transition: transform 0.15s ease, opacity 0.15s ease;
     }
-    button:hover {
-      transform: translateY(-1px);
-    }
+    button:hover { transform: translateY(-1px); }
     .primary {
       background: linear-gradient(90deg, var(--blue), var(--purple));
       color: white;
@@ -132,13 +129,19 @@
       border: 1px solid #dbeafe;
       font-weight: 700;
     }
+    .danger {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+      font-weight: 700;
+    }
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
       margin-bottom: 18px;
     }
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       padding: 13px 14px;
       border: 1px solid var(--line);
@@ -148,7 +151,7 @@
       background: rgba(255,255,255,0.9);
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
-    input:focus, textarea:focus {
+    input:focus, textarea:focus, select:focus {
       outline: none;
       border-color: #93c5fd;
       box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
@@ -185,10 +188,7 @@
       margin-bottom: 12px;
       letter-spacing: -0.02em;
     }
-    ul {
-      margin: 0;
-      padding-left: 22px;
-    }
+    ul { margin: 0; padding-left: 22px; }
     li {
       margin: 10px 0;
       font-size: 18px;
@@ -203,53 +203,232 @@
       font-size: 14px;
       line-height: 1.6;
     }
-    .schedule-form {
-      display: grid;
-      grid-template-columns: 180px 1fr auto auto;
-      gap: 10px;
-      margin-bottom: 20px;
-      align-items: start;
+
+    /* Calendar page */
+    .calendar-page {
+      background: linear-gradient(180deg, #05070c, #0a0f18 55%, #0b1220);
+      color: #f8fafc;
+      border-radius: 30px;
+      padding: 26px;
+      box-shadow: 0 20px 50px rgba(2, 6, 23, 0.4);
+      border: 1px solid rgba(255,255,255,0.06);
     }
-    .schedule-list {
-      display: grid;
-      gap: 12px;
+    .calendar-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
     }
-    .schedule-item {
-      background: rgba(255,255,255,0.86);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 16px;
-      display: grid;
-      grid-template-columns: 160px 1fr auto auto;
+    .calendar-title {
+      font-size: 28px;
+      font-weight: 800;
+      margin: 0;
+      color: #ffffff;
+    }
+    .calendar-actions {
+      display: flex;
       gap: 10px;
       align-items: center;
-      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+      flex-wrap: wrap;
     }
-    .schedule-date {
+    .calendar-chip {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #cbd5e1;
+      padding: 9px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .calendar-nav {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .calendar-nav button,
+    .calendar-toolbar button,
+    .event-actions button {
+      background: rgba(255,255,255,0.06);
+      color: #f8fafc;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: none;
+    }
+    .calendar-nav button:hover,
+    .calendar-toolbar button:hover,
+    .event-actions button:hover {
+      background: rgba(255,255,255,0.12);
+    }
+    .calendar-label {
+      font-size: 24px;
       font-weight: 800;
-      color: #1d4ed8;
-    }
-    .empty {
-      color: var(--muted);
+      min-width: 160px;
       text-align: center;
-      padding: 26px 0;
-      background: rgba(255,255,255,0.6);
-      border-radius: 16px;
-      border: 1px dashed #d1d5db;
+    }
+    .calendar-toolbar {
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .calendar-legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      color: #cbd5e1;
+      font-size: 13px;
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .calendar-grid {
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      overflow: hidden;
+      background: rgba(2, 6, 23, 0.32);
+    }
+    .calendar-weekdays,
+    .calendar-days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
+    .weekday {
+      padding: 14px 10px;
+      text-align: center;
+      font-weight: 800;
+      color: #e5e7eb;
+      background: rgba(255,255,255,0.04);
+      border-right: 1px solid rgba(255,255,255,0.06);
+      font-size: 14px;
+    }
+    .weekday:last-child { border-right: none; }
+    .day-cell {
+      min-height: 135px;
+      padding: 12px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      border-right: 1px solid rgba(255,255,255,0.06);
+      position: relative;
+      background: rgba(2, 6, 23, 0.14);
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .day-cell:hover {
+      background: rgba(30, 41, 59, 0.5);
+    }
+    .day-cell:nth-child(7n) { border-right: none; }
+    .day-cell.other-month .day-number {
+      color: #64748b;
+    }
+    .day-cell.today {
+      box-shadow: inset 0 0 0 1px rgba(59,130,246,0.7);
+      background: rgba(37, 99, 235, 0.12);
+    }
+    .day-number {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+    .event-list {
+      display: grid;
+      gap: 6px;
+    }
+    .event-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #e2e8f0;
+      line-height: 1.4;
+      padding: 3px 0;
+      word-break: break-all;
+    }
+    .event-bullet {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .event-time {
+      color: #94a3b8;
+      font-size: 12px;
+      margin-left: auto;
+      padding-left: 8px;
+      white-space: nowrap;
+    }
+    .calendar-panel {
+      margin-top: 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .calendar-panel h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      color: #f8fafc;
+    }
+    .event-form {
+      display: grid;
+      grid-template-columns: 170px 140px 140px 1fr auto auto;
+      gap: 10px;
+      align-items: start;
+    }
+    .calendar-page input,
+    .calendar-page select {
+      background: rgba(15, 23, 42, 0.7);
+      color: #f8fafc;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .calendar-page input::placeholder { color: #94a3b8; }
+    .calendar-page .message {
+      margin-top: 12px;
+      background: rgba(37, 99, 235, 0.12);
+      color: #bfdbfe;
+      border: 1px solid rgba(59,130,246,0.2);
+    }
+    .event-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    @media (max-width: 980px) {
+      .event-form {
+        grid-template-columns: 1fr 1fr;
+      }
     }
     @media (max-width: 760px) {
       .menu-grid, .teams, .grid {
         grid-template-columns: 1fr;
       }
-      .schedule-form,
-      .schedule-item {
-        grid-template-columns: 1fr;
-      }
-      .menu-btn {
-        font-size: 19px;
-      }
+      .menu-btn { font-size: 19px; }
       h1 { font-size: 32px; }
       h2 { font-size: 26px; }
+      .calendar-weekdays, .calendar-days {
+        grid-template-columns: repeat(7, minmax(110px, 1fr));
+      }
+      .calendar-grid {
+        overflow-x: auto;
+      }
+      .event-form {
+        grid-template-columns: 1fr;
+      }
+      .day-cell { min-height: 120px; }
+      .day-number { font-size: 20px; }
     }
   </style>
 </head>
@@ -310,47 +489,100 @@
     </div>
 
     <div id="schedulePage" class="page">
-      <div class="card">
-        <div class="top-bar">
-          <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-        </div>
-        <h2>스케줄 관리</h2>
-        <div class="desc">날짜와 내용을 입력하고 추가하세요. 수정과 삭제도 가능합니다.</div>
-
-        <div class="schedule-form">
-          <input type="date" id="scheduleDate">
-          <input type="text" id="scheduleText" placeholder="스케줄 내용을 입력하세요">
-          <button class="primary" onclick="addSchedule()">추가</button>
-          <button class="secondary" onclick="clearScheduleInputs()">입력 초기화</button>
+      <div class="calendar-page">
+        <div class="calendar-top">
+          <div>
+            <div class="calendar-chip">SUWEET CALENDAR</div>
+            <h2 class="calendar-title">캘린더</h2>
+          </div>
+          <div class="calendar-actions">
+            <button class="secondary" onclick="showPage('homePage')">메인으로</button>
+            <button class="primary" onclick="openScheduleFormForToday()">일정 등록</button>
+          </div>
         </div>
 
-        <div id="scheduleList" class="schedule-list"></div>
-        <div class="message" id="scheduleMessage">스케줄은 브라우저에 자동 저장됩니다.</div>
+        <div class="calendar-nav">
+          <button onclick="changeMonth(-1)">◀</button>
+          <div class="calendar-label" id="calendarLabel">2026년 3월</div>
+          <button onclick="changeMonth(1)">▶</button>
+        </div>
+
+        <div class="calendar-toolbar">
+          <div class="calendar-legend">
+            <span><span class="legend-dot" style="background:#3b82f6"></span>방송</span>
+            <span><span class="legend-dot" style="background:#22c55e"></span>방송예정</span>
+            <span><span class="legend-dot" style="background:#06b6d4"></span>합방</span>
+            <span><span class="legend-dot" style="background:#ef4444"></span>휴방</span>
+            <span><span class="legend-dot" style="background:#a855f7"></span>기타</span>
+          </div>
+          <div class="calendar-chip">날짜를 누르면 해당 날짜로 바로 입력됩니다.</div>
+        </div>
+
+        <div class="calendar-grid">
+          <div class="calendar-weekdays">
+            <div class="weekday">일</div>
+            <div class="weekday">월</div>
+            <div class="weekday">화</div>
+            <div class="weekday">수</div>
+            <div class="weekday">목</div>
+            <div class="weekday">금</div>
+            <div class="weekday">토</div>
+          </div>
+          <div class="calendar-days" id="calendarDays"></div>
+        </div>
+
+        <div class="calendar-panel">
+          <h3>일정 등록 / 수정</h3>
+          <div class="event-form">
+            <input type="date" id="scheduleDate">
+            <input type="time" id="scheduleTime">
+            <select id="scheduleCategory">
+              <option value="방송">방송</option>
+              <option value="방송예정">방송예정</option>
+              <option value="합방">합방</option>
+              <option value="휴방">휴방</option>
+              <option value="기타">기타</option>
+            </select>
+            <input type="text" id="scheduleText" placeholder="예: 합방 / 개인방송 / 휴방 공지">
+            <button class="primary" onclick="saveScheduleFromForm()">저장</button>
+            <button class="secondary" onclick="clearScheduleInputs()">초기화</button>
+          </div>
+          <div class="event-actions">
+            <button onclick="deleteSelectedSchedule()" class="danger">선택 일정 삭제</button>
+          </div>
+          <div class="message" id="scheduleMessage">스케줄은 브라우저에 자동 저장됩니다.</div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
     const PLAYER_COUNT = 10;
-    let editingScheduleIndex = null;
+    let calendarYear = new Date().getFullYear();
+    let calendarMonth = new Date().getMonth();
+    let selectedScheduleId = null;
+
+    const categoryColors = {
+      '방송': '#3b82f6',
+      '방송예정': '#22c55e',
+      '합방': '#06b6d4',
+      '휴방': '#ef4444',
+      '기타': '#a855f7'
+    };
 
     function showPage(pageId) {
       document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
       document.getElementById(pageId).classList.add('active');
+      if (pageId === 'schedulePage') renderCalendar();
     }
 
     function getInputs() {
       return [
-        document.getElementById('player1'),
-        document.getElementById('player2'),
-        document.getElementById('player3'),
-        document.getElementById('player4'),
-        document.getElementById('player5'),
-        document.getElementById('player6'),
-        document.getElementById('player7'),
-        document.getElementById('player8'),
-        document.getElementById('player9'),
-        document.getElementById('player10')
+        document.getElementById('player1'), document.getElementById('player2'),
+        document.getElementById('player3'), document.getElementById('player4'),
+        document.getElementById('player5'), document.getElementById('player6'),
+        document.getElementById('player7'), document.getElementById('player8'),
+        document.getElementById('player9'), document.getElementById('player10')
       ];
     }
 
@@ -362,7 +594,6 @@
     function loadPlayers() {
       const saved = JSON.parse(localStorage.getItem('players') || '[]');
       const inputs = getInputs();
-
       for (let i = 0; i < inputs.length; i++) {
         inputs[i].value = saved[i] || '';
         inputs[i].addEventListener('input', savePlayers);
@@ -371,15 +602,9 @@
 
     function resetPlayers() {
       if (!confirm('저장된 멤버를 초기화할까요?')) return;
-
       localStorage.removeItem('players');
       localStorage.removeItem('lastTeams');
-
-      const inputs = getInputs();
-      for (let i = 0; i < inputs.length; i++) {
-        inputs[i].value = '';
-      }
-
+      getInputs().forEach(input => input.value = '');
       document.getElementById('team1').innerHTML = '';
       document.getElementById('team2').innerHTML = '';
       document.getElementById('teamMessage').textContent = '멤버가 초기화되었습니다.';
@@ -392,11 +617,9 @@
     function makeTeams(players) {
       const team1 = [];
       const team2 = [];
-
       for (let i = 0; i < players.length; i += 2) {
         const a = players[i];
         const b = players[i + 1];
-
         if (Math.random() < 0.5) {
           team1.push(a);
           team2.push(b);
@@ -405,92 +628,70 @@
           team2.push(a);
         }
       }
-
       return { team1, team2 };
     }
 
     function displayTeam(id, team) {
       const ul = document.getElementById(id);
       ul.innerHTML = '';
-
-      for (let i = 0; i < team.length; i++) {
+      team.forEach(name => {
         const li = document.createElement('li');
-        li.textContent = team[i];
+        li.textContent = name;
         ul.appendChild(li);
-      }
+      });
     }
 
     function countChangedLines(current, previous) {
       if (!previous) return 5;
-
       let changed = 0;
       for (let i = 0; i < 5; i++) {
-        if (current.team1[i] !== previous.team1[i] || current.team2[i] !== previous.team2[i]) {
-          changed++;
-        }
+        if (current.team1[i] !== previous.team1[i] || current.team2[i] !== previous.team2[i]) changed++;
       }
       return changed;
     }
 
     function shuffleTeams() {
       const players = getPlayers();
-
       if (players.length !== PLAYER_COUNT || players.some(name => name === '')) {
         alert('10명의 이름을 모두 입력해야 합니다.');
         return;
       }
-
       const previousResult = JSON.parse(localStorage.getItem('lastTeams') || 'null');
       let result = null;
       let attempts = 0;
-
       do {
         result = makeTeams(players);
         attempts++;
       } while (previousResult && countChangedLines(result, previousResult) < 2 && attempts < 50);
-
       displayTeam('team1', result.team1);
       displayTeam('team2', result.team2);
       localStorage.setItem('lastTeams', JSON.stringify(result));
-
       if (!previousResult) {
         document.getElementById('teamMessage').textContent = '팀이 섞였습니다.';
       } else {
-        const changedLines = countChangedLines(result, previousResult);
-        document.getElementById('teamMessage').textContent = `직전 결과와 ${changedLines}라인 다르게 섞었습니다.`;
+        document.getElementById('teamMessage').textContent = `직전 결과와 ${countChangedLines(result, previousResult)}라인 다르게 섞었습니다.`;
       }
     }
 
     function copyTeams() {
       const team1Items = Array.from(document.querySelectorAll('#team1 li')).map(li => li.textContent.trim());
       const team2Items = Array.from(document.querySelectorAll('#team2 li')).map(li => li.textContent.trim());
-
       if (team1Items.length !== 5 || team2Items.length !== 5) {
         alert('먼저 팀을 섞어주세요.');
         return;
       }
-
       let text = '블루\t레드\n';
-      for (let i = 0; i < 5; i++) {
-        text += `${team1Items[i]}\t${team2Items[i]}\n`;
-      }
-
+      for (let i = 0; i < 5; i++) text += `${team1Items[i]}\t${team2Items[i]}\n`;
       navigator.clipboard.writeText(text)
-        .then(() => {
-          document.getElementById('teamMessage').textContent = '블루 / 레드 형식으로 복사되었습니다.';
-        })
+        .then(() => { document.getElementById('teamMessage').textContent = '블루 / 레드 형식으로 복사되었습니다.'; })
         .catch(() => {
           const textarea = document.createElement('textarea');
           textarea.value = text;
           document.body.appendChild(textarea);
           textarea.select();
-          try {
-            document.execCommand('copy');
-            document.getElementById('teamMessage').textContent = '블루 / 레드 형식으로 복사되었습니다.';
-          } catch (e) {
-            alert('복사에 실패했습니다. 브라우저 권한을 확인해주세요.');
-          }
+          document.execCommand('copy');
           document.body.removeChild(textarea);
+          document.getElementById('teamMessage').textContent = '블루 / 레드 형식으로 복사되었습니다.';
         });
     }
 
@@ -502,90 +703,174 @@
       localStorage.setItem('schedules', JSON.stringify(data));
     }
 
-    function renderSchedules() {
-      const list = document.getElementById('scheduleList');
-      const schedules = getSchedules().sort((a, b) => a.date.localeCompare(b.date));
-      list.innerHTML = '';
+    function formatDateKey(year, month, day) {
+      const mm = String(month + 1).padStart(2, '0');
+      const dd = String(day).padStart(2, '0');
+      return `${year}-${mm}-${dd}`;
+    }
 
-      if (schedules.length === 0) {
-        list.innerHTML = '<div class="empty">등록된 스케줄이 없습니다.</div>';
-        return;
+    function getSchedulesForDate(dateKey) {
+      return getSchedules().filter(item => item.date === dateKey);
+    }
+
+    function changeMonth(delta) {
+      calendarMonth += delta;
+      if (calendarMonth < 0) {
+        calendarMonth = 11;
+        calendarYear -= 1;
+      }
+      if (calendarMonth > 11) {
+        calendarMonth = 0;
+        calendarYear += 1;
+      }
+      renderCalendar();
+    }
+
+    function renderCalendar() {
+      const label = document.getElementById('calendarLabel');
+      const daysContainer = document.getElementById('calendarDays');
+      label.textContent = `${calendarYear}년 ${calendarMonth + 1}월`;
+      daysContainer.innerHTML = '';
+
+      const firstDay = new Date(calendarYear, calendarMonth, 1);
+      const startWeekday = firstDay.getDay();
+      const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
+      const prevMonthDays = new Date(calendarYear, calendarMonth, 0).getDate();
+      const today = new Date();
+
+      const cells = [];
+      for (let i = 0; i < startWeekday; i++) {
+        cells.push({ day: prevMonthDays - startWeekday + i + 1, other: true, monthOffset: -1 });
+      }
+      for (let day = 1; day <= daysInMonth; day++) {
+        cells.push({ day, other: false, monthOffset: 0 });
+      }
+      while (cells.length < 35) {
+        cells.push({ day: cells.length - (startWeekday + daysInMonth) + 1, other: true, monthOffset: 1 });
       }
 
-      schedules.forEach((item, index) => {
-        const row = document.createElement('div');
-        row.className = 'schedule-item';
-        row.innerHTML = `
-          <div class="schedule-date">${item.date}</div>
-          <div>${item.text}</div>
-          <button class="secondary" onclick="editSchedule(${index})">수정</button>
-          <button class="secondary" onclick="deleteSchedule(${index})">삭제</button>
+      cells.forEach(cell => {
+        let cellYear = calendarYear;
+        let cellMonth = calendarMonth + cell.monthOffset;
+        if (cellMonth < 0) { cellMonth = 11; cellYear -= 1; }
+        if (cellMonth > 11) { cellMonth = 0; cellYear += 1; }
+
+        const dateKey = formatDateKey(cellYear, cellMonth, cell.day);
+        const events = getSchedulesForDate(dateKey);
+
+        const dayCell = document.createElement('div');
+        dayCell.className = 'day-cell' + (cell.other ? ' other-month' : '');
+        if (
+          cellYear === today.getFullYear() &&
+          cellMonth === today.getMonth() &&
+          cell.day === today.getDate()
+        ) {
+          dayCell.className += ' today';
+        }
+        dayCell.onclick = () => selectCalendarDate(dateKey);
+
+        const eventHtml = events.slice(0, 3).map(event => `
+          <div class="event-item" onclick="event.stopPropagation(); editScheduleById('${event.id}')">
+            <span class="event-bullet" style="background:${categoryColors[event.category] || '#a855f7'}"></span>
+            <span>${event.text}</span>
+            <span class="event-time">${event.time || ''}</span>
+          </div>
+        `).join('');
+
+        const moreHtml = events.length > 3 ? `<div class="event-item" style="color:#94a3b8;">+${events.length - 3}개 더보기</div>` : '';
+
+        dayCell.innerHTML = `
+          <div class="day-number">${cell.day}일</div>
+          <div class="event-list">${eventHtml}${moreHtml}</div>
         `;
-        list.appendChild(row);
+        daysContainer.appendChild(dayCell);
       });
+    }
+
+    function selectCalendarDate(dateKey) {
+      document.getElementById('scheduleDate').value = dateKey;
+      selectedScheduleId = null;
+      document.getElementById('scheduleMessage').textContent = `${dateKey} 날짜로 입력할 수 있습니다.`;
+    }
+
+    function openScheduleFormForToday() {
+      const today = new Date();
+      document.getElementById('scheduleDate').value = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+      document.getElementById('scheduleTime').value = '';
+      document.getElementById('scheduleText').value = '';
+      document.getElementById('scheduleCategory').value = '방송';
+      selectedScheduleId = null;
     }
 
     function clearScheduleInputs() {
       document.getElementById('scheduleDate').value = '';
+      document.getElementById('scheduleTime').value = '';
       document.getElementById('scheduleText').value = '';
-      editingScheduleIndex = null;
+      document.getElementById('scheduleCategory').value = '방송';
+      selectedScheduleId = null;
       document.getElementById('scheduleMessage').textContent = '입력값을 초기화했습니다.';
     }
 
-    function addSchedule() {
+    function saveScheduleFromForm() {
       const date = document.getElementById('scheduleDate').value;
+      const time = document.getElementById('scheduleTime').value;
       const text = document.getElementById('scheduleText').value.trim();
+      const category = document.getElementById('scheduleCategory').value;
 
       if (!date || !text) {
-        alert('날짜와 내용을 모두 입력해주세요.');
+        alert('날짜와 내용을 입력해주세요.');
         return;
       }
 
       const schedules = getSchedules();
-
-      if (editingScheduleIndex === null) {
-        schedules.push({ date, text });
-        document.getElementById('scheduleMessage').textContent = '스케줄을 추가했습니다.';
+      if (selectedScheduleId) {
+        const index = schedules.findIndex(item => item.id === selectedScheduleId);
+        if (index !== -1) {
+          schedules[index] = { ...schedules[index], date, time, text, category };
+          document.getElementById('scheduleMessage').textContent = '일정을 수정했습니다.';
+        }
       } else {
-        schedules[editingScheduleIndex] = { date, text };
-        document.getElementById('scheduleMessage').textContent = '스케줄을 수정했습니다.';
+        schedules.push({
+          id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          date,
+          time,
+          text,
+          category
+        });
+        document.getElementById('scheduleMessage').textContent = '일정을 추가했습니다.';
       }
 
       saveSchedules(schedules);
       clearScheduleInputs();
-      renderSchedules();
+      renderCalendar();
     }
 
-    function editSchedule(index) {
-      const schedules = getSchedules().sort((a, b) => a.date.localeCompare(b.date));
-      const item = schedules[index];
+    function editScheduleById(id) {
+      const item = getSchedules().find(v => v.id === id);
+      if (!item) return;
+      selectedScheduleId = id;
       document.getElementById('scheduleDate').value = item.date;
+      document.getElementById('scheduleTime').value = item.time || '';
       document.getElementById('scheduleText').value = item.text;
-
-      const original = getSchedules();
-      const realIndex = original.findIndex(v => v.date === item.date && v.text === item.text);
-      editingScheduleIndex = realIndex;
-      document.getElementById('scheduleMessage').textContent = '수정할 내용을 편집한 뒤 추가 버튼을 눌러주세요.';
-      showPage('schedulePage');
+      document.getElementById('scheduleCategory').value = item.category || '기타';
+      document.getElementById('scheduleMessage').textContent = '선택한 일정이 입력창에 불러와졌습니다. 수정 후 저장을 눌러주세요.';
     }
 
-    function deleteSchedule(index) {
-      const sorted = getSchedules().sort((a, b) => a.date.localeCompare(b.date));
-      const item = sorted[index];
-      const original = getSchedules();
-      const realIndex = original.findIndex(v => v.date === item.date && v.text === item.text);
-
-      if (realIndex === -1) return;
-      if (!confirm('이 스케줄을 삭제할까요?')) return;
-
-      original.splice(realIndex, 1);
-      saveSchedules(original);
-      renderSchedules();
-      document.getElementById('scheduleMessage').textContent = '스케줄을 삭제했습니다.';
+    function deleteSelectedSchedule() {
+      if (!selectedScheduleId) {
+        alert('먼저 수정할 일정 하나를 선택해주세요.');
+        return;
+      }
+      if (!confirm('선택한 일정을 삭제할까요?')) return;
+      const schedules = getSchedules().filter(item => item.id !== selectedScheduleId);
+      saveSchedules(schedules);
+      clearScheduleInputs();
+      renderCalendar();
+      document.getElementById('scheduleMessage').textContent = '선택한 일정을 삭제했습니다.';
     }
 
     loadPlayers();
-    renderSchedules();
+    renderCalendar();
   </script>
 </body>
 </html>
