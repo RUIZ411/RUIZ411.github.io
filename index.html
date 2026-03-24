@@ -499,13 +499,14 @@
       <div class="card">
         <div class="top-bar" style="justify-content:flex-end; margin-bottom:12px;">
           <button class="secondary" onclick="toggleDarkMode()" id="themeToggleBtn">다크모드</button>
+          <button class="secondary" onclick="toggleAdminLock()" id="adminToggleBtn">관리자 잠금 해제</button>
         </div>
         <div class="hero-badge">SUWEET TOOL</div>
         <div class="hero-image-wrap">
           <img id="heroImage" class="hero-image" alt="메인 이미지" src="https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80">
         </div>
         <div class="image-upload-row">
-          <label class="mini-glass-btn" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;" for="heroImageInput">이미지 추가</label>
+          <label class="mini-glass-btn" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;" for="heroImageInput" onclick="return requireAdmin('이미지 변경')">이미지 추가</label>
           <button class="mini-glass-btn" onclick="resetHeroImage()">이미지 초기화</button>
           <input id="heroImageInput" class="hidden-file-input" type="file" accept="image/*" onchange="handleHeroImageUpload(event)">
         </div>
@@ -631,6 +632,41 @@
 
   <script>
     const PLAYER_COUNT = 10;
+    const ADMIN_CODE = 'suweet0305';
+
+    function isAdminUnlocked() {
+      return localStorage.getItem('adminUnlocked') === 'true';
+    }
+
+    function updateAdminButton() {
+      const btn = document.getElementById('adminToggleBtn');
+      if (btn) btn.textContent = isAdminUnlocked() ? '관리자 잠금' : '관리자 잠금 해제';
+    }
+
+    function requireAdmin(actionLabel = '이 기능') {
+      if (isAdminUnlocked()) return true;
+      alert(`${actionLabel}은(는) 관리자 코드가 필요합니다.`);
+      return false;
+    }
+
+    function toggleAdminLock() {
+      if (isAdminUnlocked()) {
+        localStorage.setItem('adminUnlocked', 'false');
+        updateAdminButton();
+        alert('관리자 잠금이 설정되었습니다.');
+        return;
+      }
+
+      const code = prompt('관리자 코드를 입력하세요.');
+      if (code === null) return;
+      if (code === ADMIN_CODE) {
+        localStorage.setItem('adminUnlocked', 'true');
+        updateAdminButton();
+        alert('관리자 잠금이 해제되었습니다.');
+      } else {
+        alert('관리자 코드가 올바르지 않습니다.');
+      }
+    }
     let calendarYear = new Date().getFullYear();
     let calendarMonth = new Date().getMonth();
     let selectedScheduleId = null;
@@ -670,6 +706,10 @@
     }
 
     function handleHeroImageUpload(event) {
+      if (!requireAdmin('이미지 변경')) {
+        event.target.value = '';
+        return;
+      }
       const file = event.target.files && event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
@@ -682,6 +722,7 @@
     }
 
     function resetHeroImage() {
+      if (!requireAdmin('이미지 초기화')) return;
       const defaultImage = 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80';
       document.getElementById('heroImage').src = defaultImage;
       localStorage.removeItem('heroImage');
@@ -720,6 +761,7 @@
     }
 
     function resetPlayers() {
+      if (!requireAdmin('멤버 초기화')) return;
       if (!confirm('저장된 멤버를 초기화할까요?')) return;
       localStorage.removeItem('players');
       localStorage.removeItem('lastTeams');
@@ -770,6 +812,7 @@
     }
 
     function shuffleTeams() {
+      if (!requireAdmin('팀 섞기')) return;
       const players = getPlayers();
       if (players.length !== PLAYER_COUNT || players.some(name => name === '')) {
         alert('10명의 이름을 모두 입력해야 합니다.');
@@ -793,6 +836,7 @@
     }
 
     function copyTeams() {
+      if (!requireAdmin('팀 복사')) return;
       const team1Items = Array.from(document.querySelectorAll('#team1 li')).map(li => li.textContent.trim());
       const team2Items = Array.from(document.querySelectorAll('#team2 li')).map(li => li.textContent.trim());
       if (team1Items.length !== 5 || team2Items.length !== 5) {
@@ -922,6 +966,7 @@
     }
 
     function openScheduleFormForToday() {
+      if (!requireAdmin('일정 등록')) return;
       const today = new Date();
       document.getElementById('scheduleDate').value = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
       document.getElementById('scheduleTime').value = '';
@@ -940,6 +985,7 @@
     }
 
     function saveScheduleFromForm() {
+      if (!requireAdmin('일정 저장')) return;
       const date = document.getElementById('scheduleDate').value;
       const time = document.getElementById('scheduleTime').value;
       const text = document.getElementById('scheduleText').value.trim();
@@ -974,6 +1020,7 @@
     }
 
     function editScheduleById(id) {
+      if (!requireAdmin('일정 수정')) return;
       const item = getSchedules().find(v => v.id === id);
       if (!item) return;
       selectedScheduleId = id;
@@ -985,6 +1032,7 @@
     }
 
     function deleteSelectedSchedule() {
+      if (!requireAdmin('일정 삭제')) return;
       if (!selectedScheduleId) {
         alert('먼저 수정할 일정 하나를 선택해주세요.');
         return;
@@ -998,6 +1046,7 @@
     }
 
     applySavedTheme();
+    updateAdminButton();
     loadHeroImage();
     loadPlayers();
     renderCalendar();
