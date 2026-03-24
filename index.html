@@ -110,10 +110,27 @@
     }
     .image-upload-row {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       justify-content: center;
       flex-wrap: wrap;
       margin: 0 0 18px;
+    }
+    .mini-glass-btn {
+      padding: 7px 12px;
+      font-size: 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.42);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.45);
+      color: var(--text);
+      font-weight: 700;
+      box-shadow: 0 6px 14px rgba(15,23,42,0.08);
+      min-width: auto;
+    }
+    body.dark .mini-glass-btn {
+      background: rgba(15,23,42,0.42);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #e2e8f0;
     }
     .hidden-file-input {
       display: none;
@@ -488,8 +505,8 @@
           <img id="heroImage" class="hero-image" alt="메인 이미지" src="https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80">
         </div>
         <div class="image-upload-row">
-          <label class="secondary" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;" for="heroImageInput">이미지 추가</label>
-          <button class="secondary" onclick="resetHeroImage()">이미지 초기화</button>
+          <label class="mini-glass-btn" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;" for="heroImageInput">이미지 추가</label>
+          <button class="mini-glass-btn" onclick="resetHeroImage()">이미지 초기화</button>
           <input id="heroImageInput" class="hidden-file-input" type="file" accept="image/*" onchange="handleHeroImageUpload(event)">
         </div>
         <h1>메인 페이지</h1>
