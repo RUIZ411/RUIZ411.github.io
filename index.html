@@ -304,21 +304,21 @@
         <div class="detail-card relation-search-card">
           <h3 class="detail-title">멤버 관계 승률</h3>
           <div class="desc detail-desc">
-            기준 멤버 이름 1명을 입력하면, 다른 멤버와 같은 팀일 때 / 적팀일 때 승률을 한 번에 보여줍니다.
+            비교할 멤버 이름 1명을 입력하면, 수힛 기준으로 같은 팀일 때 / 적팀일 때 승률을 보여줍니다.
           </div>
 
           <div class="relation-search-row">
-            <input type="text" id="memberRelationInput" placeholder="예: 수힛" />
+            <input type="text" id="memberRelationInput" placeholder="예: 꼬부기" />
             <button class="primary" onclick="renderMemberRelationStats()">검색</button>
             <button class="secondary" onclick="clearMemberRelationStats()">초기화</button>
           </div>
 
           <div id="memberRelationSummary" class="message relation-message">
-            기준 멤버 이름을 입력해 주세요.
+            비교할 멤버 이름을 입력해 주세요. (수힛 기준)
           </div>
 
           <div class="detail-card inner-detail-card">
-            <h3 class="detail-title small">멤버별 관계 승률</h3>
+            <h3 class="detail-title small">수힛 기준 관계 승률</h3>
             <div id="memberRelationTable"></div>
           </div>
         </div>
