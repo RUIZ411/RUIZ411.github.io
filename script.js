@@ -29,6 +29,8 @@ const recordsCollection = collection(db, "killRecords");
 
 const PLAYER_COUNT = 10;
 const ADMIN_CODE = "suweet0305";
+const MIN_RECORD_TEAM_SIZE = 4;
+const MAX_RECORD_TEAM_SIZE = 8;
 
 let calendarYear = new Date().getFullYear();
 let calendarMonth = new Date().getMonth();
@@ -600,6 +602,27 @@ async function deleteSelectedSchedule() {
   }
 }
 
+function getTeamInputs(prefix) {
+  const inputs = [];
+  for (let i = 1; i <= MAX_RECORD_TEAM_SIZE; i++) {
+    inputs.push(document.getElementById(`${prefix}${i}`));
+  }
+  return inputs;
+}
+
+function getFilledTeamMembers(prefix) {
+  return getTeamInputs(prefix)
+    .map((input) => input.value.trim())
+    .filter((name) => name !== "");
+}
+
+function fillTeamInputs(prefix, members = []) {
+  const inputs = getTeamInputs(prefix);
+  inputs.forEach((input, index) => {
+    input.value = members[index] || "";
+  });
+}
+
 function startRecordSync() {
   const q = query(recordsCollection, orderBy("createdAt", "desc"));
 
@@ -651,6 +674,14 @@ function updateRecordSummary() {
   document.getElementById("recordOverallWinRate").textContent = `${overallWinRate}%`;
 }
 
+function renderMembersHtml(members) {
+  if (!Array.isArray(members) || members.length === 0) {
+    return `<div>-</div>`;
+  }
+
+  return members.map((member) => `<div>${escapeHtml(member)}</div>`).join("");
+}
+
 function renderRecords() {
   const list = document.getElementById("recordList");
   list.innerHTML = "";
@@ -683,22 +714,16 @@ function renderRecords() {
 
       <div class="record-meta-grid">
         <div class="record-block">
-          <div class="record-block-title">우리 팀</div>
+          <div class="record-block-title">우리 팀 (${myTeam.length}명)</div>
           <div class="record-members">
-            <div>${escapeHtml(myTeam[0] || "-")}</div>
-            <div>${escapeHtml(myTeam[1] || "-")}</div>
-            <div>${escapeHtml(myTeam[2] || "-")}</div>
-            <div>${escapeHtml(myTeam[3] || "-")}</div>
+            ${renderMembersHtml(myTeam)}
           </div>
         </div>
 
         <div class="record-block">
-          <div class="record-block-title">상대 팀</div>
+          <div class="record-block-title">상대 팀 (${enemyTeam.length}명)</div>
           <div class="record-members">
-            <div>${escapeHtml(enemyTeam[0] || "-")}</div>
-            <div>${escapeHtml(enemyTeam[1] || "-")}</div>
-            <div>${escapeHtml(enemyTeam[2] || "-")}</div>
-            <div>${escapeHtml(enemyTeam[3] || "-")}</div>
+            ${renderMembersHtml(enemyTeam)}
           </div>
         </div>
 
@@ -730,15 +755,8 @@ function selectRecord(id) {
   document.getElementById("recordBalance").value = item.balance || "";
   document.getElementById("recordPureKills").value = item.pureKills ?? "";
 
-  document.getElementById("myTeam1").value = item.myTeam?.[0] || "";
-  document.getElementById("myTeam2").value = item.myTeam?.[1] || "";
-  document.getElementById("myTeam3").value = item.myTeam?.[2] || "";
-  document.getElementById("myTeam4").value = item.myTeam?.[3] || "";
-
-  document.getElementById("enemyTeam1").value = item.enemyTeam?.[0] || "";
-  document.getElementById("enemyTeam2").value = item.enemyTeam?.[1] || "";
-  document.getElementById("enemyTeam3").value = item.enemyTeam?.[2] || "";
-  document.getElementById("enemyTeam4").value = item.enemyTeam?.[3] || "";
+  fillTeamInputs("myTeam", item.myTeam || []);
+  fillTeamInputs("enemyTeam", item.enemyTeam || []);
 
   document.getElementById("recordMessage").textContent =
     "선택한 전적이 입력창에 불러와졌습니다. 삭제할 수 있습니다.";
@@ -753,15 +771,8 @@ function clearRecordInputs() {
   document.getElementById("recordBalance").value = "";
   document.getElementById("recordPureKills").value = "";
 
-  document.getElementById("myTeam1").value = "";
-  document.getElementById("myTeam2").value = "";
-  document.getElementById("myTeam3").value = "";
-  document.getElementById("myTeam4").value = "";
-
-  document.getElementById("enemyTeam1").value = "";
-  document.getElementById("enemyTeam2").value = "";
-  document.getElementById("enemyTeam3").value = "";
-  document.getElementById("enemyTeam4").value = "";
+  fillTeamInputs("myTeam", []);
+  fillTeamInputs("enemyTeam", []);
 
   selectedRecordId = null;
   setDefaultRecordDate();
@@ -778,19 +789,8 @@ async function saveRecord() {
   const balance = document.getElementById("recordBalance").value.trim();
   const pureKills = document.getElementById("recordPureKills").value;
 
-  const myTeam = [
-    document.getElementById("myTeam1").value.trim(),
-    document.getElementById("myTeam2").value.trim(),
-    document.getElementById("myTeam3").value.trim(),
-    document.getElementById("myTeam4").value.trim()
-  ];
-
-  const enemyTeam = [
-    document.getElementById("enemyTeam1").value.trim(),
-    document.getElementById("enemyTeam2").value.trim(),
-    document.getElementById("enemyTeam3").value.trim(),
-    document.getElementById("enemyTeam4").value.trim()
-  ];
+  const myTeam = getFilledTeamMembers("myTeam");
+  const enemyTeam = getFilledTeamMembers("enemyTeam");
 
   if (!date) {
     alert("날짜를 입력해주세요.");
@@ -802,13 +802,18 @@ async function saveRecord() {
     return;
   }
 
-  if (myTeam.some((name) => name === "")) {
-    alert("팀원 1~4를 모두 입력해주세요.");
+  if (myTeam.length < MIN_RECORD_TEAM_SIZE || myTeam.length > MAX_RECORD_TEAM_SIZE) {
+    alert(`우리 팀은 ${MIN_RECORD_TEAM_SIZE}명 이상 ${MAX_RECORD_TEAM_SIZE}명 이하로 입력해주세요.`);
     return;
   }
 
-  if (enemyTeam.some((name) => name === "")) {
-    alert("상대팀 1~4를 모두 입력해주세요.");
+  if (enemyTeam.length < MIN_RECORD_TEAM_SIZE || enemyTeam.length > MAX_RECORD_TEAM_SIZE) {
+    alert(`상대 팀은 ${MIN_RECORD_TEAM_SIZE}명 이상 ${MAX_RECORD_TEAM_SIZE}명 이하로 입력해주세요.`);
+    return;
+  }
+
+  if (myTeam.length !== enemyTeam.length) {
+    alert("우리 팀과 상대 팀의 인원 수는 같아야 합니다.");
     return;
   }
 
