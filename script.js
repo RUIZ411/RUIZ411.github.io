@@ -714,7 +714,7 @@ function selectRecord(id) {
   document.getElementById("recordType").value = item.type || "킬내기";
   document.getElementById("recordResult").value = item.result || "승리";
   document.getElementById("recordBalance").value = item.balance || "";
-  document.getElementById("recordPureKills").value = Number(item.pureKills || 0);
+  document.getElementById("recordPureKills").value = item.pureKills ?? "";
 
   document.getElementById("myTeam1").value = item.myTeam?.[0] || "";
   document.getElementById("myTeam2").value = item.myTeam?.[1] || "";
@@ -783,8 +783,8 @@ async function saveRecord() {
     return;
   }
 
-  if (pureKills === "" || Number(pureKills) < 0) {
-    alert("순수킬을 올바르게 입력해주세요.");
+  if (pureKills === "" || Number.isNaN(Number(pureKills))) {
+    alert("순수킬을 숫자로 입력해주세요.");
     return;
   }
 
