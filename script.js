@@ -31,6 +31,7 @@ const PLAYER_COUNT = 10;
 const ADMIN_CODE = "suweet0305";
 const MIN_RECORD_TEAM_SIZE = 4;
 const MAX_RECORD_TEAM_SIZE = 8;
+const RELATION_BASE_MEMBER = "수힛";
 
 let calendarYear = new Date().getFullYear();
 let calendarMonth = new Date().getMonth();
@@ -985,25 +986,6 @@ function renderMapStats() {
     makeStatsTable(["종류", "전적", "승률"], rows);
 }
 
-function getWinLossFromPerspective(record, targetName) {
-  const myTeam = normalizeMembers(record.myTeam);
-  const enemyTeam = normalizeMembers(record.enemyTeam);
-  const isInMyTeam = myTeam.includes(targetName);
-  const isInEnemyTeam = enemyTeam.includes(targetName);
-
-  if (!isInMyTeam && !isInEnemyTeam) {
-    return null;
-  }
-
-  const myTeamWon = record.result === "승리";
-
-  if (isInMyTeam) {
-    return myTeamWon ? "승리" : "패배";
-  }
-
-  return myTeamWon ? "패배" : "승리";
-}
-
 function renderDetailPage() {
   renderBalanceStats();
   renderMonthStats();
@@ -1014,7 +996,7 @@ function renderDetailPage() {
     renderMemberRelationStats();
   } else {
     document.getElementById("memberRelationTable").innerHTML =
-      `<div class="empty-stats">기준 멤버를 검색해 주세요.</div>`;
+      `<div class="empty-stats">비교할 멤버를 검색해 주세요.</div>`;
   }
 }
 
@@ -1023,135 +1005,118 @@ function clearMemberRelationStats() {
   if (input) input.value = "";
 
   document.getElementById("memberRelationSummary").textContent =
-    "기준 멤버 이름을 입력해 주세요.";
+    "비교할 멤버 이름을 입력해 주세요. (수힛 기준)";
 
   document.getElementById("memberRelationTable").innerHTML =
-    `<div class="empty-stats">기준 멤버를 검색해 주세요.</div>`;
+    `<div class="empty-stats">비교할 멤버를 검색해 주세요.</div>`;
+}
+
+function getBasePerspectiveResult(record) {
+  const myTeam = normalizeMembers(record.myTeam);
+  const enemyTeam = normalizeMembers(record.enemyTeam);
+
+  const baseInMy = myTeam.includes(RELATION_BASE_MEMBER);
+  const baseInEnemy = enemyTeam.includes(RELATION_BASE_MEMBER);
+
+  if (!baseInMy && !baseInEnemy) return null;
+
+  const myTeamWon = record.result === "승리";
+
+  if (baseInMy) {
+    return myTeamWon ? "승리" : "패배";
+  }
+
+  return myTeamWon ? "패배" : "승리";
 }
 
 function renderMemberRelationStats() {
   const input = document.getElementById("memberRelationInput");
-  const rawName = input ? input.value.trim() : "";
+  const targetName = input ? input.value.trim() : "";
 
-  if (!rawName) {
+  if (!targetName) {
     clearMemberRelationStats();
     return;
   }
 
-  const targetName = rawName;
-  const targetGames = [];
-  const allMembersSet = new Set();
+  if (targetName === RELATION_BASE_MEMBER) {
+    document.getElementById("memberRelationSummary").textContent =
+      `기준 멤버는 이미 ${RELATION_BASE_MEMBER}로 고정되어 있습니다. 비교할 다른 멤버를 입력해 주세요.`;
+
+    document.getElementById("memberRelationTable").innerHTML =
+      `<div class="empty-stats">${RELATION_BASE_MEMBER}이 아닌 다른 멤버를 입력해 주세요.</div>`;
+    return;
+  }
+
+  let sameWins = 0;
+  let sameLosses = 0;
+  let enemyWins = 0;
+  let enemyLosses = 0;
+  let relatedMatchCount = 0;
 
   recordsCache.forEach((record) => {
     const myTeam = normalizeMembers(record.myTeam);
     const enemyTeam = normalizeMembers(record.enemyTeam);
 
-    myTeam.forEach((name) => allMembersSet.add(name));
-    enemyTeam.forEach((name) => allMembersSet.add(name));
+    const baseInMy = myTeam.includes(RELATION_BASE_MEMBER);
+    const baseInEnemy = enemyTeam.includes(RELATION_BASE_MEMBER);
+    const targetInMy = myTeam.includes(targetName);
+    const targetInEnemy = enemyTeam.includes(targetName);
 
-    if (myTeam.includes(targetName) || enemyTeam.includes(targetName)) {
-      targetGames.push(record);
+    if (!(baseInMy || baseInEnemy)) return;
+    if (!(targetInMy || targetInEnemy)) return;
+
+    const baseResult = getBasePerspectiveResult(record);
+    if (!baseResult) return;
+
+    relatedMatchCount++;
+
+    const sameTeam =
+      (baseInMy && targetInMy) ||
+      (baseInEnemy && targetInEnemy);
+
+    const versusTeam =
+      (baseInMy && targetInEnemy) ||
+      (baseInEnemy && targetInMy);
+
+    if (sameTeam) {
+      if (baseResult === "승리") sameWins++;
+      else sameLosses++;
+    }
+
+    if (versusTeam) {
+      if (baseResult === "승리") enemyWins++;
+      else enemyLosses++;
     }
   });
 
-  if (!targetGames.length) {
+  if (!relatedMatchCount) {
     document.getElementById("memberRelationSummary").textContent =
-      `${targetName} 이름이 포함된 전적이 없습니다.`;
+      `${RELATION_BASE_MEMBER} 기준으로 ${targetName}와 함께 계산할 전적이 없습니다.`;
 
     document.getElementById("memberRelationTable").innerHTML =
       `<div class="empty-stats">관계 데이터를 찾지 못했습니다.</div>`;
     return;
   }
 
-  const targetPerspectiveResults = targetGames
-    .map((record) => ({
-      record,
-      perspective: getWinLossFromPerspective(record, targetName)
-    }))
-    .filter((item) => item.perspective);
-
-  const targetWins = targetPerspectiveResults.filter(
-    (item) => item.perspective === "승리"
-  ).length;
-  const targetLosses = targetPerspectiveResults.filter(
-    (item) => item.perspective === "패배"
-  ).length;
-  const targetTotal = targetWins + targetLosses;
-  const targetRate = calcRate(targetWins, targetTotal);
+  const sameTotal = sameWins + sameLosses;
+  const enemyTotal = enemyWins + enemyLosses;
 
   document.getElementById("memberRelationSummary").textContent =
-    `${targetName} 기준 전체 전적: ${targetWins}승 ${targetLosses}패 / ${targetRate}`;
+    `${RELATION_BASE_MEMBER} 기준 / 비교 멤버: ${targetName}`;
 
-  const otherMembers = Array.from(allMembersSet).filter(
-    (name) => name !== targetName
-  );
-
-  const rows = [];
-
-  otherMembers.forEach((otherName) => {
-    let sameWins = 0;
-    let sameLosses = 0;
-    let enemyWins = 0;
-    let enemyLosses = 0;
-
-    targetGames.forEach((record) => {
-      const myTeam = normalizeMembers(record.myTeam);
-      const enemyTeam = normalizeMembers(record.enemyTeam);
-
-      const targetInMy = myTeam.includes(targetName);
-      const targetInEnemy = enemyTeam.includes(targetName);
-      const otherInMy = myTeam.includes(otherName);
-      const otherInEnemy = enemyTeam.includes(otherName);
-
-      if (!(targetInMy || targetInEnemy)) return;
-
-      const targetPerspective = getWinLossFromPerspective(record, targetName);
-      if (!targetPerspective) return;
-
-      const sameTeam =
-        (targetInMy && otherInMy) ||
-        (targetInEnemy && otherInEnemy);
-
-      const enemyTeamMatch =
-        (targetInMy && otherInEnemy) ||
-        (targetInEnemy && otherInMy);
-
-      if (sameTeam) {
-        if (targetPerspective === "승리") sameWins++;
-        else sameLosses++;
-      }
-
-      if (enemyTeamMatch) {
-        if (targetPerspective === "승리") enemyWins++;
-        else enemyLosses++;
-      }
-    });
-
-    const sameTotal = sameWins + sameLosses;
-    const enemyTotal = enemyWins + enemyLosses;
-
-    if (sameTotal === 0 && enemyTotal === 0) return;
-
-    rows.push([
-      otherName,
-      `${sameTotal}경기`,
-      `${sameWins}승 ${sameLosses}패`,
-      calcRate(sameWins, sameTotal),
-      `${enemyTotal}경기`,
-      `${enemyWins}승 ${enemyLosses}패`,
-      calcRate(enemyWins, enemyTotal)
-    ]);
-  });
-
-  rows.sort((a, b) => {
-    const aSame = parseFloat(a[3]);
-    const bSame = parseFloat(b[3]);
-    return bSame - aSame;
-  });
+  const rows = [[
+    targetName,
+    `${sameTotal}경기`,
+    `${sameWins}승 ${sameLosses}패`,
+    calcRate(sameWins, sameTotal),
+    `${enemyTotal}경기`,
+    `${enemyWins}승 ${enemyLosses}패`,
+    calcRate(enemyWins, enemyTotal)
+  ]];
 
   document.getElementById("memberRelationTable").innerHTML =
     makeStatsTable(
-      ["멤버", "같이 경기", "같이 전적", "같이 승률", "상대 경기", "상대 전적", "상대 승률"],
+      ["멤버", "같은 팀 경기", "같은 팀 전적", "같은 팀 승률", "적팀 경기", "적팀 전적", "적팀 승률"],
       rows
     );
 }
