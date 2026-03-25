@@ -546,7 +546,7 @@ body.dark .message {
   margin-top: 14px;
 }
 
-.kill-summary {
+.record-summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
@@ -574,90 +574,141 @@ body.dark .summary-box {
 }
 
 .summary-box strong {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 800;
 }
 
-.kill-grid {
-  grid-template-columns: 1fr 1fr;
+.section-subtitle {
+  margin: 18px 0 10px;
+  font-size: 18px;
 }
 
-.kill-list {
+.record-form-grid {
   display: grid;
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
+  margin-bottom: 18px;
 }
 
-.kill-item {
+.record-team-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.record-list {
+  display: grid;
+  gap: 14px;
+}
+
+.record-item {
   background: rgba(255,255,255,0.72);
   border: 1px solid var(--line);
   border-radius: 18px;
-  padding: 16px;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
+  padding: 18px;
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
-.kill-item:hover {
+.record-item:hover {
   transform: translateY(-1px);
 }
 
-.kill-item.selected {
+.record-item.selected {
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
 }
 
-body.dark .kill-item {
+body.dark .record-item {
   background: rgba(15,23,42,0.72);
 }
 
-.kill-left {
-  display: grid;
-  gap: 6px;
+.record-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
-.kill-name {
-  font-size: 20px;
-  font-weight: 800;
+.record-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.kill-meta {
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.kill-memo {
-  color: var(--text);
-  font-size: 14px;
-}
-
-.kill-right {
-  text-align: right;
-  min-width: 90px;
-}
-
-.kill-count {
-  font-size: 26px;
-  font-weight: 800;
-  color: #d97706;
-}
-
-.kill-rank {
-  display: inline-block;
-  margin-top: 8px;
+.record-badge {
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(59,130,246,0.1);
-  color: #1d4ed8;
   font-size: 12px;
   font-weight: 800;
+  background: rgba(59,130,246,0.1);
+  color: #1d4ed8;
 }
 
-body.dark .kill-rank {
-  color: #bfdbfe;
+body.dark .record-badge {
   background: rgba(96,165,250,0.14);
+  color: #bfdbfe;
+}
+
+.record-result-win {
+  background: rgba(34,197,94,0.12);
+  color: #15803d;
+}
+
+.record-result-lose {
+  background: rgba(239,68,68,0.12);
+  color: #b91c1c;
+}
+
+body.dark .record-result-win {
+  color: #86efac;
+}
+
+body.dark .record-result-lose {
+  color: #fca5a5;
+}
+
+.record-date {
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.record-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 180px 120px;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.record-block {
+  background: rgba(255,255,255,0.5);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+body.dark .record-block {
+  background: rgba(2,6,23,0.26);
+}
+
+.record-block-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.record-members {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.record-single-value {
+  font-size: 18px;
+  font-weight: 800;
 }
 
 @media (max-width: 980px) {
@@ -665,7 +716,19 @@ body.dark .kill-rank {
     grid-template-columns: 1fr 1fr;
   }
 
-  .kill-summary {
+  .record-summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .record-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .record-team-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .record-meta-grid {
     grid-template-columns: 1fr 1fr;
   }
 }
@@ -675,7 +738,9 @@ body.dark .kill-rank {
   .menu-grid-3,
   .teams,
   .grid,
-  .kill-grid {
+  .record-form-grid,
+  .record-team-grid,
+  .record-meta-grid {
     grid-template-columns: 1fr;
   }
 
@@ -698,12 +763,4 @@ body.dark .kill-rank {
 
   .day-cell { min-height: 120px; }
   .day-number { font-size: 20px; }
-
-  .kill-item {
-    flex-direction: column;
-  }
-
-  .kill-right {
-    text-align: left;
-  }
 }
