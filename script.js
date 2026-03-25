@@ -25,7 +25,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const schedulesCollection = collection(db, "schedules");
-const killCollection = collection(db, "killRecords");
+const recordsCollection = collection(db, "killRecords");
 
 const PLAYER_COUNT = 10;
 const ADMIN_CODE = "suweet0305";
@@ -35,8 +35,8 @@ let calendarMonth = new Date().getMonth();
 let selectedScheduleId = null;
 let schedulesCache = [];
 
-let selectedKillId = null;
-let killCache = [];
+let selectedRecordId = null;
+let recordsCache = [];
 
 const categoryColors = {
   "방송": "#3b82f6",
@@ -63,10 +63,10 @@ window.editScheduleById = editScheduleById;
 window.deleteSelectedSchedule = deleteSelectedSchedule;
 window.requireAdmin = requireAdmin;
 
-window.saveKillRecord = saveKillRecord;
-window.clearKillInputs = clearKillInputs;
-window.selectKillRecord = selectKillRecord;
-window.deleteSelectedKillRecord = deleteSelectedKillRecord;
+window.saveRecord = saveRecord;
+window.clearRecordInputs = clearRecordInputs;
+window.selectRecord = selectRecord;
+window.deleteSelectedRecord = deleteSelectedRecord;
 
 function isAdminUnlocked() {
   return localStorage.getItem("adminUnlocked") === "true";
@@ -484,8 +484,8 @@ function renderCalendar() {
       .map((event) => `
         <div class="event-item" onclick="event.stopPropagation(); window.editScheduleById('${event.id}')">
           <span class="event-bullet" style="background:${categoryColors[event.category] || "#a855f7"}"></span>
-          <span>${event.text || ""}</span>
-          <span class="event-time">${event.time || ""}</span>
+          <span>${escapeHtml(event.text || "")}</span>
+          <span class="event-time">${escapeHtml(event.time || "")}</span>
         </div>
       `)
       .join("");
@@ -600,66 +600,103 @@ async function deleteSelectedSchedule() {
   }
 }
 
-function startKillSync() {
-  const q = query(killCollection, orderBy("createdAt", "desc"));
+function startRecordSync() {
+  const q = query(recordsCollection, orderBy("createdAt", "desc"));
 
   onSnapshot(
     q,
     (snapshot) => {
-      killCache = snapshot.docs.map((item) => ({
+      recordsCache = snapshot.docs.map((item) => ({
         id: item.id,
         ...item.data()
       }));
 
-      renderKillRecords();
-      updateKillSummary();
+      renderRecords();
+      updateRecordSummary();
     },
     (error) => {
       console.error(error);
-      document.getElementById("killMessage").textContent =
-        "킬내기 전적을 불러오는 중 오류가 발생했습니다.";
+      document.getElementById("recordMessage").textContent =
+        "전적을 불러오는 중 오류가 발생했습니다.";
     }
   );
 }
 
-function updateKillSummary() {
-  const totalGames = killCache.length;
-  const totalKills = killCache.reduce((sum, item) => sum + Number(item.kills || 0), 0);
-  const bestKills = killCache.reduce(
-    (max, item) => Math.max(max, Number(item.kills || 0)),
+function updateRecordSummary() {
+  const totalGames = recordsCache.length;
+  const totalWins = recordsCache.filter((item) => item.result === "승리").length;
+  const totalLosses = recordsCache.filter((item) => item.result === "패배").length;
+  const totalPureKills = recordsCache.reduce(
+    (sum, item) => sum + Number(item.pureKills || 0),
     0
   );
-  const averageKills = totalGames > 0 ? (totalKills / totalGames).toFixed(1) : "0";
 
-  document.getElementById("killTotalGames").textContent = totalGames;
-  document.getElementById("killTotalKills").textContent = totalKills;
-  document.getElementById("killAverageKills").textContent = averageKills;
-  document.getElementById("killBestKills").textContent = bestKills;
+  document.getElementById("recordTotalGames").textContent = totalGames;
+  document.getElementById("recordTotalWins").textContent = totalWins;
+  document.getElementById("recordTotalLosses").textContent = totalLosses;
+  document.getElementById("recordTotalPureKills").textContent = totalPureKills;
 }
 
-function renderKillRecords() {
-  const list = document.getElementById("killList");
+function renderRecords() {
+  const list = document.getElementById("recordList");
   list.innerHTML = "";
 
-  if (killCache.length === 0) {
+  if (recordsCache.length === 0) {
     list.innerHTML = `<div class="message">아직 저장된 전적이 없습니다.</div>`;
     return;
   }
 
-  killCache.forEach((item, index) => {
+  recordsCache.forEach((item) => {
     const div = document.createElement("div");
-    div.className = "kill-item" + (selectedKillId === item.id ? " selected" : "");
-    div.onclick = () => selectKillRecord(item.id);
+    div.className = "record-item" + (selectedRecordId === item.id ? " selected" : "");
+    div.onclick = () => selectRecord(item.id);
+
+    const myTeam = Array.isArray(item.myTeam) ? item.myTeam : [];
+    const enemyTeam = Array.isArray(item.enemyTeam) ? item.enemyTeam : [];
 
     div.innerHTML = `
-      <div class="kill-left">
-        <div class="kill-name">${escapeHtml(item.name || "-")}</div>
-        <div class="kill-meta">날짜: ${escapeHtml(item.date || "-")}</div>
-        <div class="kill-memo">메모: ${escapeHtml(item.memo || "-")}</div>
+      <div class="record-item-top">
+        <div>
+          <div class="record-date">${escapeHtml(item.date || "-")}</div>
+        </div>
+        <div class="record-badges">
+          <span class="record-badge">${escapeHtml(item.type || "-")}</span>
+          <span class="record-badge ${item.result === "승리" ? "record-result-win" : "record-result-lose"}">
+            ${escapeHtml(item.result || "-")}
+          </span>
+        </div>
       </div>
-      <div class="kill-right">
-        <div class="kill-count">${Number(item.kills || 0)}킬</div>
-        <div class="kill-rank">${index + 1}번째 기록</div>
+
+      <div class="record-meta-grid">
+        <div class="record-block">
+          <div class="record-block-title">우리 팀</div>
+          <div class="record-members">
+            <div>${escapeHtml(myTeam[0] || "-")}</div>
+            <div>${escapeHtml(myTeam[1] || "-")}</div>
+            <div>${escapeHtml(myTeam[2] || "-")}</div>
+            <div>${escapeHtml(myTeam[3] || "-")}</div>
+          </div>
+        </div>
+
+        <div class="record-block">
+          <div class="record-block-title">상대 팀</div>
+          <div class="record-members">
+            <div>${escapeHtml(enemyTeam[0] || "-")}</div>
+            <div>${escapeHtml(enemyTeam[1] || "-")}</div>
+            <div>${escapeHtml(enemyTeam[2] || "-")}</div>
+            <div>${escapeHtml(enemyTeam[3] || "-")}</div>
+          </div>
+        </div>
+
+        <div class="record-block">
+          <div class="record-block-title">맞밸런스</div>
+          <div class="record-single-value">${escapeHtml(item.balance || "-")}</div>
+        </div>
+
+        <div class="record-block">
+          <div class="record-block-title">순수킬</div>
+          <div class="record-single-value">${Number(item.pureKills || 0)}</div>
+        </div>
       </div>
     `;
 
@@ -667,80 +704,124 @@ function renderKillRecords() {
   });
 }
 
-function selectKillRecord(id) {
-  selectedKillId = id;
+function selectRecord(id) {
+  selectedRecordId = id;
 
-  const item = killCache.find((v) => v.id === id);
+  const item = recordsCache.find((v) => v.id === id);
   if (!item) return;
 
-  document.getElementById("killName").value = item.name || "";
-  document.getElementById("killCount").value = Number(item.kills || 0);
-  document.getElementById("killDate").value = item.date || "";
-  document.getElementById("killMemo").value = item.memo || "";
-  document.getElementById("killMessage").textContent =
-    "선택한 전적이 입력창에 불러와졌습니다. 삭제하거나 새 전적 입력 후 저장할 수 있습니다.";
+  document.getElementById("recordDate").value = item.date || "";
+  document.getElementById("recordType").value = item.type || "킬내기";
+  document.getElementById("recordResult").value = item.result || "승리";
+  document.getElementById("recordBalance").value = item.balance || "";
+  document.getElementById("recordPureKills").value = Number(item.pureKills || 0);
 
-  renderKillRecords();
+  document.getElementById("myTeam1").value = item.myTeam?.[0] || "";
+  document.getElementById("myTeam2").value = item.myTeam?.[1] || "";
+  document.getElementById("myTeam3").value = item.myTeam?.[2] || "";
+  document.getElementById("myTeam4").value = item.myTeam?.[3] || "";
+
+  document.getElementById("enemyTeam1").value = item.enemyTeam?.[0] || "";
+  document.getElementById("enemyTeam2").value = item.enemyTeam?.[1] || "";
+  document.getElementById("enemyTeam3").value = item.enemyTeam?.[2] || "";
+  document.getElementById("enemyTeam4").value = item.enemyTeam?.[3] || "";
+
+  document.getElementById("recordMessage").textContent =
+    "선택한 전적이 입력창에 불러와졌습니다. 삭제할 수 있습니다.";
+
+  renderRecords();
 }
 
-function clearKillInputs() {
-  document.getElementById("killName").value = "";
-  document.getElementById("killCount").value = "";
-  document.getElementById("killMemo").value = "";
+function clearRecordInputs() {
+  document.getElementById("recordDate").value = "";
+  document.getElementById("recordType").value = "킬내기";
+  document.getElementById("recordResult").value = "승리";
+  document.getElementById("recordBalance").value = "";
+  document.getElementById("recordPureKills").value = "";
 
-  const today = new Date();
-  document.getElementById("killDate").value =
-    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  document.getElementById("myTeam1").value = "";
+  document.getElementById("myTeam2").value = "";
+  document.getElementById("myTeam3").value = "";
+  document.getElementById("myTeam4").value = "";
 
-  selectedKillId = null;
-  document.getElementById("killMessage").textContent = "입력값을 초기화했습니다.";
-  renderKillRecords();
+  document.getElementById("enemyTeam1").value = "";
+  document.getElementById("enemyTeam2").value = "";
+  document.getElementById("enemyTeam3").value = "";
+  document.getElementById("enemyTeam4").value = "";
+
+  selectedRecordId = null;
+  setDefaultRecordDate();
+  document.getElementById("recordMessage").textContent = "입력값을 초기화했습니다.";
+  renderRecords();
 }
 
-async function saveKillRecord() {
-  if (!requireAdmin("킬내기 저장")) return;
+async function saveRecord() {
+  if (!requireAdmin("전적 저장")) return;
 
-  const name = document.getElementById("killName").value.trim();
-  const kills = document.getElementById("killCount").value;
-  const date = document.getElementById("killDate").value;
-  const memo = document.getElementById("killMemo").value.trim();
+  const date = document.getElementById("recordDate").value;
+  const type = document.getElementById("recordType").value;
+  const result = document.getElementById("recordResult").value;
+  const balance = document.getElementById("recordBalance").value.trim();
+  const pureKills = document.getElementById("recordPureKills").value;
 
-  if (!name) {
-    alert("닉네임을 입력해주세요.");
-    return;
-  }
+  const myTeam = [
+    document.getElementById("myTeam1").value.trim(),
+    document.getElementById("myTeam2").value.trim(),
+    document.getElementById("myTeam3").value.trim(),
+    document.getElementById("myTeam4").value.trim()
+  ];
 
-  if (kills === "" || Number(kills) < 0) {
-    alert("킬 수를 올바르게 입력해주세요.");
-    return;
-  }
+  const enemyTeam = [
+    document.getElementById("enemyTeam1").value.trim(),
+    document.getElementById("enemyTeam2").value.trim(),
+    document.getElementById("enemyTeam3").value.trim(),
+    document.getElementById("enemyTeam4").value.trim()
+  ];
 
   if (!date) {
     alert("날짜를 입력해주세요.");
     return;
   }
 
+  if (pureKills === "" || Number(pureKills) < 0) {
+    alert("순수킬을 올바르게 입력해주세요.");
+    return;
+  }
+
+  if (myTeam.some((name) => name === "")) {
+    alert("팀원 1~4를 모두 입력해주세요.");
+    return;
+  }
+
+  if (enemyTeam.some((name) => name === "")) {
+    alert("상대팀 1~4를 모두 입력해주세요.");
+    return;
+  }
+
   try {
-    await addDoc(killCollection, {
-      name,
-      kills: Number(kills),
+    await addDoc(recordsCollection, {
       date,
-      memo,
+      type,
+      result,
+      balance,
+      pureKills: Number(pureKills),
+      myTeam,
+      enemyTeam,
       createdAt: Date.now()
     });
 
-    document.getElementById("killMessage").textContent = "전적을 저장했습니다.";
-    clearKillInputs();
+    document.getElementById("recordMessage").textContent = "전적을 저장했습니다.";
+    clearRecordInputs();
   } catch (error) {
     console.error(error);
     alert("전적 저장 중 오류가 발생했습니다.");
   }
 }
 
-async function deleteSelectedKillRecord() {
+async function deleteSelectedRecord() {
   if (!requireAdmin("전적 삭제")) return;
 
-  if (!selectedKillId) {
+  if (!selectedRecordId) {
     alert("먼저 삭제할 전적을 하나 선택해주세요.");
     return;
   }
@@ -748,14 +829,20 @@ async function deleteSelectedKillRecord() {
   if (!confirm("선택한 전적을 삭제할까요?")) return;
 
   try {
-    await deleteDoc(doc(db, "killRecords", selectedKillId));
-    selectedKillId = null;
-    clearKillInputs();
-    document.getElementById("killMessage").textContent = "선택한 전적을 삭제했습니다.";
+    await deleteDoc(doc(db, "killRecords", selectedRecordId));
+    selectedRecordId = null;
+    clearRecordInputs();
+    document.getElementById("recordMessage").textContent = "선택한 전적을 삭제했습니다.";
   } catch (error) {
     console.error(error);
     alert("전적 삭제 중 오류가 발생했습니다.");
   }
+}
+
+function setDefaultRecordDate() {
+  const today = new Date();
+  document.getElementById("recordDate").value =
+    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 
 function escapeHtml(value) {
@@ -767,16 +854,10 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function setDefaultKillDate() {
-  const today = new Date();
-  document.getElementById("killDate").value =
-    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-}
-
 applySavedTheme();
 updateAdminButton();
 loadHeroImage();
 loadPlayers();
-setDefaultKillDate();
+setDefaultRecordDate();
 startScheduleSync();
-startKillSync();
+startRecordSync();
