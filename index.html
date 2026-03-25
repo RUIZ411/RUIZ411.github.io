@@ -4,517 +4,54 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SUWEET TOOL</title>
-  <style>
-    * { box-sizing: border-box; }
-    :root {
-      --bg1: #eef2ff;
-      --bg2: #f8fafc;
-      --card: rgba(255,255,255,0.82);
-      --line: #e5e7eb;
-      --text: #111827;
-      --muted: #6b7280;
-      --blue: #3b82f6;
-      --purple: #9333ea;
-      --red: #ef4444;
-      --shadow: 0 18px 40px rgba(79, 70, 229, 0.12);
-    }
-    body.dark {
-      --bg1: #05070c;
-      --bg2: #0b1220;
-      --card: rgba(15,23,42,0.82);
-      --line: rgba(255,255,255,0.08);
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --blue: #60a5fa;
-      --purple: #a855f7;
-      --red: #f87171;
-      --shadow: 0 18px 40px rgba(2, 6, 23, 0.35);
-    }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(59,130,246,0.18), transparent 28%),
-        radial-gradient(circle at top right, rgba(147,51,234,0.16), transparent 24%),
-        linear-gradient(180deg, var(--bg1), var(--bg2));
-      min-height: 100vh;
-      padding: 24px;
-      color: var(--text);
-    }
-    .app {
-      width: 100%;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    .page { display: none; }
-    .page.active {
-      display: block;
-      animation: fadeIn 0.28s ease;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .card {
-      background: var(--card);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.5);
-      border-radius: 28px;
-      box-shadow: var(--shadow);
-      padding: 28px;
-    }
-    h1 {
-      margin: 0 0 12px;
-      font-size: 38px;
-      text-align: center;
-      letter-spacing: -0.03em;
-    }
-    h2 {
-      margin: 0 0 12px;
-      font-size: 30px;
-      letter-spacing: -0.02em;
-    }
-    .desc {
-      text-align: center;
-      color: var(--muted);
-      line-height: 1.6;
-      margin-bottom: 22px;
-      font-size: 15px;
-    }
-    .hero-badge {
-      width: fit-content;
-      margin: 0 auto 14px;
-      padding: 8px 14px;
-      border-radius: 999px;
-      background: rgba(59,130,246,0.1);
-      color: #1d4ed8;
-      font-size: 13px;
-      font-weight: 700;
-    }
-    body.dark .hero-badge {
-      background: rgba(96,165,250,0.14);
-      color: #bfdbfe;
-    }
-    .hero-image {
-      width: 100%;
-      max-height: 260px;
-      object-fit: cover;
-      border-radius: 22px;
-      margin: 0 0 22px;
-      display: block;
-      box-shadow: 0 14px 28px rgba(15, 23, 42, 0.16);
-      border: 1px solid rgba(255,255,255,0.35);
-    }
-    .hero-image-wrap {
-      margin-bottom: 8px;
-    }
-    .image-upload-row {
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-      flex-wrap: wrap;
-      margin: 0 0 18px;
-    }
-    .mini-glass-btn {
-      padding: 7px 12px;
-      font-size: 12px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.42);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.45);
-      color: var(--text);
-      font-weight: 700;
-      box-shadow: 0 6px 14px rgba(15,23,42,0.08);
-      min-width: auto;
-    }
-    body.dark .mini-glass-btn {
-      background: rgba(15,23,42,0.42);
-      border: 1px solid rgba(255,255,255,0.12);
-      color: #e2e8f0;
-    }
-    .hidden-file-input {
-      display: none;
-    }
-    .menu-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-      margin-top: 24px;
-    }
-    .menu-btn {
-      border: none;
-      border-radius: 24px;
-      padding: 32px 24px;
-      font-size: 22px;
-      font-weight: 700;
-      cursor: pointer;
-      background: linear-gradient(135deg, #3b82f6, #9333ea);
-      color: white;
-      box-shadow: 0 14px 28px rgba(79,70,229,0.22);
-      transition: transform 0.18s ease, box-shadow 0.18s ease;
-    }
-    .menu-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 18px 32px rgba(79,70,229,0.28);
-    }
-    .top-bar {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 18px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    button {
-      border: none;
-      border-radius: 14px;
-      padding: 12px 18px;
-      font-size: 15px;
-      cursor: pointer;
-      transition: transform 0.15s ease, opacity 0.15s ease;
-    }
-    button:hover { transform: translateY(-1px); }
-    .primary {
-      background: linear-gradient(90deg, var(--blue), var(--purple));
-      color: white;
-      font-weight: 700;
-      box-shadow: 0 10px 20px rgba(79,70,229,0.18);
-    }
-    .secondary {
-      background: #eef2ff;
-      color: #312e81;
-      border: 1px solid #dbeafe;
-      font-weight: 700;
-    }
-    .danger {
-      background: #fee2e2;
-      color: #b91c1c;
-      border: 1px solid #fecaca;
-      font-weight: 700;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 13px 14px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      font-size: 15px;
-      font-family: inherit;
-      background: rgba(255,255,255,0.9);
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
-      color: var(--text);
-    }
-    input:focus, textarea:focus, select:focus {
-      outline: none;
-      border-color: #93c5fd;
-      box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
-    }
-    .btn-row {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 18px;
-      flex-wrap: wrap;
-    }
-    .teams {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 16px;
-    }
-    .team-box {
-      border-radius: 22px;
-      padding: 18px;
-      min-height: 220px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
-    }
-    .team-box:first-child {
-      background: linear-gradient(180deg, rgba(59,130,246,0.14), rgba(255,255,255,0.85));
-      border: 1px solid rgba(59,130,246,0.18);
-    }
-    .team-box:last-child {
-      background: linear-gradient(180deg, rgba(239,68,68,0.12), rgba(255,255,255,0.85));
-      border: 1px solid rgba(239,68,68,0.16);
-    }
-    .team-title {
-      font-size: 24px;
-      font-weight: 800;
-      margin-bottom: 12px;
-      letter-spacing: -0.02em;
-    }
-    ul { margin: 0; padding-left: 22px; }
-    li {
-      margin: 10px 0;
-      font-size: 18px;
-      font-weight: 600;
-    }
-    .message {
-      background: linear-gradient(90deg, rgba(59,130,246,0.08), rgba(147,51,234,0.08));
-      color: #1e40af;
-      border: 1px solid rgba(59,130,246,0.12);
-      border-radius: 14px;
-      padding: 12px 14px;
-      font-size: 14px;
-      line-height: 1.6;
-    }
-    body.dark .message {
-      background: rgba(30, 41, 59, 0.8);
-      color: #cbd5e1;
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .calendar-page {
-      background: linear-gradient(180deg, #05070c, #0a0f18 55%, #0b1220);
-      color: #f8fafc;
-      border-radius: 30px;
-      padding: 26px;
-      box-shadow: 0 20px 50px rgba(2, 6, 23, 0.4);
-      border: 1px solid rgba(255,255,255,0.06);
-    }
-    .calendar-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: center;
-      margin-bottom: 22px;
-      flex-wrap: wrap;
-    }
-    .calendar-title {
-      font-size: 28px;
-      font-weight: 800;
-      margin: 0;
-      color: #ffffff;
-    }
-    .calendar-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .calendar-chip {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.08);
-      color: #cbd5e1;
-      padding: 9px 12px;
-      border-radius: 12px;
-      font-size: 13px;
-      font-weight: 700;
-    }
-    .calendar-nav {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 18px;
-      flex-wrap: wrap;
-    }
-    .calendar-nav button,
-    .calendar-toolbar button,
-    .event-actions button {
-      background: rgba(255,255,255,0.06);
-      color: #f8fafc;
-      border: 1px solid rgba(255,255,255,0.08);
-      box-shadow: none;
-    }
-    .calendar-nav button:hover,
-    .calendar-toolbar button:hover,
-    .event-actions button:hover {
-      background: rgba(255,255,255,0.12);
-    }
-    .calendar-label {
-      font-size: 24px;
-      font-weight: 800;
-      min-width: 160px;
-      text-align: center;
-    }
-    .calendar-toolbar {
-      display: flex;
-      gap: 10px;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-    .calendar-legend {
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
-      color: #cbd5e1;
-      font-size: 13px;
-    }
-    .legend-dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-right: 6px;
-      vertical-align: middle;
-    }
-    .calendar-grid {
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 18px;
-      overflow: hidden;
-      background: rgba(2, 6, 23, 0.32);
-    }
-    .calendar-weekdays,
-    .calendar-days {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-    }
-    .weekday {
-      padding: 14px 10px;
-      text-align: center;
-      font-weight: 800;
-      color: #e5e7eb;
-      background: rgba(255,255,255,0.04);
-      border-right: 1px solid rgba(255,255,255,0.06);
-      font-size: 14px;
-    }
-    .weekday:last-child { border-right: none; }
-    .day-cell {
-      min-height: 135px;
-      padding: 12px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      border-right: 1px solid rgba(255,255,255,0.06);
-      position: relative;
-      background: rgba(2, 6, 23, 0.14);
-      cursor: pointer;
-      transition: background 0.15s ease;
-    }
-    .day-cell:hover {
-      background: rgba(30, 41, 59, 0.5);
-    }
-    .day-cell:nth-child(7n) { border-right: none; }
-    .day-cell.other-month .day-number {
-      color: #64748b;
-    }
-    .day-cell.today {
-      box-shadow: inset 0 0 0 1px rgba(59,130,246,0.7);
-      background: rgba(37, 99, 235, 0.12);
-    }
-    .day-number {
-      font-size: 24px;
-      font-weight: 800;
-      margin-bottom: 8px;
-      color: #ffffff;
-    }
-    .event-list {
-      display: grid;
-      gap: 6px;
-    }
-    .event-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      color: #e2e8f0;
-      line-height: 1.4;
-      padding: 3px 0;
-      word-break: break-all;
-    }
-    .event-bullet {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-    .event-time {
-      color: #94a3b8;
-      font-size: 12px;
-      margin-left: auto;
-      padding-left: 8px;
-      white-space: nowrap;
-    }
-    .calendar-panel {
-      margin-top: 18px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 18px;
-      padding: 18px;
-    }
-    .calendar-panel h3 {
-      margin: 0 0 12px;
-      font-size: 18px;
-      color: #f8fafc;
-    }
-    .event-form {
-      display: grid;
-      grid-template-columns: 170px 140px 140px 1fr auto auto;
-      gap: 10px;
-      align-items: start;
-    }
-    .calendar-page input,
-    .calendar-page select {
-      background: rgba(15, 23, 42, 0.7);
-      color: #f8fafc;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    .calendar-page input::placeholder { color: #94a3b8; }
-    .calendar-page .message {
-      margin-top: 12px;
-      background: rgba(37, 99, 235, 0.12);
-      color: #bfdbfe;
-      border: 1px solid rgba(59,130,246,0.2);
-    }
-    .event-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 14px;
-    }
-
-    @media (max-width: 980px) {
-      .event-form {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-    @media (max-width: 760px) {
-      .menu-grid, .teams, .grid {
-        grid-template-columns: 1fr;
-      }
-      .menu-btn { font-size: 19px; }
-      h1 { font-size: 32px; }
-      h2 { font-size: 26px; }
-      .calendar-weekdays, .calendar-days {
-        grid-template-columns: repeat(7, minmax(110px, 1fr));
-      }
-      .calendar-grid {
-        overflow-x: auto;
-      }
-      .event-form {
-        grid-template-columns: 1fr;
-      }
-      .day-cell { min-height: 120px; }
-      .day-number { font-size: 20px; }
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app">
     <div id="homePage" class="page active">
       <div class="card">
-        <div class="top-bar" style="justify-content:flex-end; margin-bottom:12px;">
+        <div class="top-bar home-top-bar">
           <button class="secondary" onclick="toggleDarkMode()" id="themeToggleBtn">다크모드</button>
           <button class="secondary" onclick="toggleAdminLock()" id="adminToggleBtn">관리자 잠금 해제</button>
         </div>
+
         <div class="hero-badge">SUWEET TOOL</div>
+
         <div class="hero-image-wrap">
-          <img id="heroImage" class="hero-image" alt="메인 이미지" src="https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80">
+          <img
+            id="heroImage"
+            class="hero-image"
+            alt="메인 이미지"
+            src="https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80"
+          />
         </div>
+
         <div class="image-upload-row">
-          <label class="mini-glass-btn" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer;" for="heroImageInput" onclick="return requireAdmin('이미지 변경')">이미지 추가</label>
+          <label
+            class="mini-glass-btn"
+            for="heroImageInput"
+            onclick="return requireAdmin('이미지 변경')"
+          >이미지 추가</label>
           <button class="mini-glass-btn" onclick="resetHeroImage()">이미지 초기화</button>
-          <input id="heroImageInput" class="hidden-file-input" type="file" accept="image/*" onchange="handleHeroImageUpload(event)">
+          <input
+            id="heroImageInput"
+            class="hidden-file-input"
+            type="file"
+            accept="image/*"
+            onchange="handleHeroImageUpload(event)"
+          />
         </div>
+
         <h1>메인 페이지</h1>
-        <div class="desc">원하는 메뉴를 눌러 해당 기능으로 이동하세요.<br>팀 섞기와 스케줄을 한 번에 관리할 수 있습니다.</div>
-        <div class="menu-grid">
+        <div class="desc">
+          원하는 메뉴를 눌러 해당 기능으로 이동하세요.<br />
+          팀 섞기와 스케줄, 킬내기 전적을 한 번에 관리할 수 있습니다.
+        </div>
+
+        <div class="menu-grid menu-grid-3">
           <button class="menu-btn" onclick="showPage('teamPage')">팀 섞기</button>
           <button class="menu-btn" onclick="showPage('schedulePage')">스케줄</button>
+          <button class="menu-btn" onclick="showPage('killPage')">킬내기 전적</button>
         </div>
       </div>
     </div>
@@ -524,20 +61,23 @@
         <div class="top-bar">
           <button class="secondary" onclick="showPage('homePage')">메인으로</button>
         </div>
+
         <h2>5 vs 5 팀 섞기</h2>
-        <div class="desc">입력 순서대로 2명씩 같은 티어로 인식합니다. (1-2 / 3-4 / 5-6 / 7-8 / 9-10)</div>
+        <div class="desc">
+          입력 순서대로 2명씩 같은 티어로 인식합니다. (1-2 / 3-4 / 5-6 / 7-8 / 9-10)
+        </div>
 
         <div class="grid">
-          <input type="text" id="player1" placeholder="플레이어 1">
-          <input type="text" id="player2" placeholder="플레이어 2">
-          <input type="text" id="player3" placeholder="플레이어 3">
-          <input type="text" id="player4" placeholder="플레이어 4">
-          <input type="text" id="player5" placeholder="플레이어 5">
-          <input type="text" id="player6" placeholder="플레이어 6">
-          <input type="text" id="player7" placeholder="플레이어 7">
-          <input type="text" id="player8" placeholder="플레이어 8">
-          <input type="text" id="player9" placeholder="플레이어 9">
-          <input type="text" id="player10" placeholder="플레이어 10">
+          <input type="text" id="player1" placeholder="플레이어 1" />
+          <input type="text" id="player2" placeholder="플레이어 2" />
+          <input type="text" id="player3" placeholder="플레이어 3" />
+          <input type="text" id="player4" placeholder="플레이어 4" />
+          <input type="text" id="player5" placeholder="플레이어 5" />
+          <input type="text" id="player6" placeholder="플레이어 6" />
+          <input type="text" id="player7" placeholder="플레이어 7" />
+          <input type="text" id="player8" placeholder="플레이어 8" />
+          <input type="text" id="player9" placeholder="플레이어 9" />
+          <input type="text" id="player10" placeholder="플레이어 10" />
         </div>
 
         <div class="btn-row">
@@ -557,7 +97,9 @@
           </div>
         </div>
 
-        <div class="message" id="teamMessage">한 번 입력한 멤버는 저장되며, 다음 섞기 때는 직전 결과와 최소 2라인 이상 다르게 섞습니다.</div>
+        <div class="message" id="teamMessage">
+          한 번 입력한 멤버는 저장되며, 다음 섞기 때는 직전 결과와 최소 2라인 이상 다르게 섞습니다.
+        </div>
       </div>
     </div>
 
@@ -568,6 +110,7 @@
             <div class="calendar-chip">SUWEET CALENDAR</div>
             <h2 class="calendar-title">캘린더</h2>
           </div>
+
           <div class="calendar-actions">
             <button class="secondary" onclick="showPage('homePage')">메인으로</button>
             <button class="primary" onclick="openScheduleFormForToday()">일정 등록</button>
@@ -607,9 +150,10 @@
 
         <div class="calendar-panel">
           <h3>일정 등록 / 수정</h3>
+
           <div class="event-form">
-            <input type="date" id="scheduleDate">
-            <input type="time" id="scheduleTime">
+            <input type="date" id="scheduleDate" />
+            <input type="time" id="scheduleTime" />
             <select id="scheduleCategory">
               <option value="방송">방송</option>
               <option value="방송예정">방송예정</option>
@@ -617,509 +161,67 @@
               <option value="힛차">힛차</option>
               <option value="기타">기타</option>
             </select>
-            <input type="text" id="scheduleText" placeholder="예: 합방 / 개인방송 / 힛차 공지">
+            <input type="text" id="scheduleText" placeholder="예: 합방 / 개인방송 / 힛차 공지" />
             <button class="primary" onclick="saveScheduleFromForm()">저장</button>
             <button class="secondary" onclick="clearScheduleInputs()">초기화</button>
           </div>
+
           <div class="event-actions">
             <button onclick="deleteSelectedSchedule()" class="danger">선택 일정 삭제</button>
           </div>
+
           <div class="message" id="scheduleMessage">스케줄은 Firebase에 공유 저장됩니다.</div>
         </div>
       </div>
     </div>
+
+    <div id="killPage" class="page">
+      <div class="card">
+        <div class="top-bar">
+          <button class="secondary" onclick="showPage('homePage')">메인으로</button>
+        </div>
+
+        <h2>킬내기 전적</h2>
+        <div class="desc">전적은 Firebase에 공유 저장되며, 모든 접속자에게 같은 내용으로 보입니다.</div>
+
+        <div class="kill-summary">
+          <div class="summary-box">
+            <span>총 판수</span>
+            <strong id="killTotalGames">0</strong>
+          </div>
+          <div class="summary-box">
+            <span>총 킬</span>
+            <strong id="killTotalKills">0</strong>
+          </div>
+          <div class="summary-box">
+            <span>평균 킬</span>
+            <strong id="killAverageKills">0</strong>
+          </div>
+          <div class="summary-box">
+            <span>최고 킬</span>
+            <strong id="killBestKills">0</strong>
+          </div>
+        </div>
+
+        <div class="grid kill-grid">
+          <input type="text" id="killName" placeholder="닉네임" />
+          <input type="number" id="killCount" placeholder="킬 수" min="0" />
+          <input type="date" id="killDate" />
+          <input type="text" id="killMemo" placeholder="메모 (선택)" />
+        </div>
+
+        <div class="btn-row">
+          <button class="primary" onclick="saveKillRecord()">저장</button>
+          <button class="secondary" onclick="clearKillInputs()">초기화</button>
+          <button class="danger" onclick="deleteSelectedKillRecord()">선택 전적 삭제</button>
+        </div>
+
+        <div class="message" id="killMessage">전적을 입력하고 저장 버튼을 눌러주세요.</div>
+        <div id="killList" class="kill-list"></div>
+      </div>
+    </div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      updateDoc,
-      deleteDoc,
-      doc,
-      onSnapshot
-    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCvz6bttOcYmSL7JY2mgljKDfWkKyrvhyg",
-      authDomain: "schedule-74da4.firebaseapp.com",
-      projectId: "schedule-74da4",
-      storageBucket: "schedule-74da4.firebasestorage.app",
-      messagingSenderId: "520094037606",
-      appId: "1:520094037606:web:8f51c2746642a6a7549fa7",
-      measurementId: "G-4NB6BZ5SXG"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const schedulesCollection = collection(db, "schedules");
-
-    const PLAYER_COUNT = 10;
-    const ADMIN_CODE = 'suweet0305';
-
-    let calendarYear = new Date().getFullYear();
-    let calendarMonth = new Date().getMonth();
-    let selectedScheduleId = null;
-    let schedulesCache = [];
-
-    const categoryColors = {
-      '방송': '#3b82f6',
-      '방송예정': '#22c55e',
-      '합방': '#06b6d4',
-      '힛차': '#ef4444',
-      '기타': '#a855f7'
-    };
-
-    window.showPage = showPage;
-    window.toggleDarkMode = toggleDarkMode;
-    window.toggleAdminLock = toggleAdminLock;
-    window.handleHeroImageUpload = handleHeroImageUpload;
-    window.resetHeroImage = resetHeroImage;
-    window.shuffleTeams = shuffleTeams;
-    window.copyTeams = copyTeams;
-    window.resetPlayers = resetPlayers;
-    window.openScheduleFormForToday = openScheduleFormForToday;
-    window.changeMonth = changeMonth;
-    window.selectCalendarDate = selectCalendarDate;
-    window.clearScheduleInputs = clearScheduleInputs;
-    window.saveScheduleFromForm = saveScheduleFromForm;
-    window.editScheduleById = editScheduleById;
-    window.deleteSelectedSchedule = deleteSelectedSchedule;
-    window.requireAdmin = requireAdmin;
-
-    function isAdminUnlocked() {
-      return localStorage.getItem('adminUnlocked') === 'true';
-    }
-
-    function updateAdminButton() {
-      const btn = document.getElementById('adminToggleBtn');
-      if (btn) btn.textContent = isAdminUnlocked() ? '관리자 잠금' : '관리자 잠금 해제';
-    }
-
-    function requireAdmin(actionLabel = '이 기능') {
-      if (isAdminUnlocked()) return true;
-      alert(`${actionLabel}은(는) 관리자 코드가 필요합니다.`);
-      return false;
-    }
-
-    function toggleAdminLock() {
-      if (isAdminUnlocked()) {
-        localStorage.setItem('adminUnlocked', 'false');
-        updateAdminButton();
-        alert('관리자 잠금이 설정되었습니다.');
-        return;
-      }
-
-      const code = prompt('관리자 코드를 입력하세요.');
-      if (code === null) return;
-
-      if (code === ADMIN_CODE) {
-        localStorage.setItem('adminUnlocked', 'true');
-        updateAdminButton();
-        alert('관리자 잠금이 해제되었습니다.');
-      } else {
-        alert('관리자 코드가 올바르지 않습니다.');
-      }
-    }
-
-    function applySavedTheme() {
-      const savedTheme = localStorage.getItem('themeMode') || 'light';
-      if (savedTheme === 'dark') {
-        document.body.classList.add('dark');
-      } else {
-        document.body.classList.remove('dark');
-      }
-      const btn = document.getElementById('themeToggleBtn');
-      if (btn) btn.textContent = document.body.classList.contains('dark') ? '라이트모드' : '다크모드';
-    }
-
-    function toggleDarkMode() {
-      document.body.classList.toggle('dark');
-      const isDark = document.body.classList.contains('dark');
-      localStorage.setItem('themeMode', isDark ? 'dark' : 'light');
-      const btn = document.getElementById('themeToggleBtn');
-      if (btn) btn.textContent = isDark ? '라이트모드' : '다크모드';
-    }
-
-    function loadHeroImage() {
-      const savedImage = localStorage.getItem('heroImage');
-      if (savedImage) {
-        document.getElementById('heroImage').src = savedImage;
-      }
-    }
-
-    function handleHeroImageUpload(event) {
-      if (!requireAdmin('이미지 변경')) {
-        event.target.value = '';
-        return;
-      }
-      const file = event.target.files && event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const result = e.target.result;
-        document.getElementById('heroImage').src = result;
-        localStorage.setItem('heroImage', result);
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function resetHeroImage() {
-      if (!requireAdmin('이미지 초기화')) return;
-      const defaultImage = 'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80';
-      document.getElementById('heroImage').src = defaultImage;
-      localStorage.removeItem('heroImage');
-      const input = document.getElementById('heroImageInput');
-      if (input) input.value = '';
-    }
-
-    function showPage(pageId) {
-      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-      document.getElementById(pageId).classList.add('active');
-      if (pageId === 'schedulePage') renderCalendar();
-    }
-
-    function getInputs() {
-      return [
-        document.getElementById('player1'),
-        document.getElementById('player2'),
-        document.getElementById('player3'),
-        document.getElementById('player4'),
-        document.getElementById('player5'),
-        document.getElementById('player6'),
-        document.getElementById('player7'),
-        document.getElementById('player8'),
-        document.getElementById('player9'),
-        document.getElementById('player10')
-      ];
-    }
-
-    function savePlayers() {
-      const values = getInputs().map(input => input.value.trim());
-      localStorage.setItem('players', JSON.stringify(values));
-    }
-
-    function loadPlayers() {
-      const saved = JSON.parse(localStorage.getItem('players') || '[]');
-      const inputs = getInputs();
-      for (let i = 0; i < inputs.length; i++) {
-        inputs[i].value = saved[i] || '';
-        inputs[i].addEventListener('input', savePlayers);
-      }
-    }
-
-    function resetPlayers() {
-      if (!requireAdmin('멤버 초기화')) return;
-      if (!confirm('저장된 멤버를 초기화할까요?')) return;
-      localStorage.removeItem('players');
-      localStorage.removeItem('lastTeams');
-      getInputs().forEach(input => input.value = '');
-      document.getElementById('team1').innerHTML = '';
-      document.getElementById('team2').innerHTML = '';
-      document.getElementById('teamMessage').textContent = '멤버가 초기화되었습니다.';
-    }
-
-    function getPlayers() {
-      return getInputs().map(input => input.value.trim());
-    }
-
-    function makeTeams(players) {
-      const team1 = [];
-      const team2 = [];
-      for (let i = 0; i < players.length; i += 2) {
-        const a = players[i];
-        const b = players[i + 1];
-        if (Math.random() < 0.5) {
-          team1.push(a);
-          team2.push(b);
-        } else {
-          team1.push(b);
-          team2.push(a);
-        }
-      }
-      return { team1, team2 };
-    }
-
-    function displayTeam(id, team) {
-      const ul = document.getElementById(id);
-      ul.innerHTML = '';
-      team.forEach(name => {
-        const li = document.createElement('li');
-        li.textContent = name;
-        ul.appendChild(li);
-      });
-    }
-
-    function countChangedLines(current, previous) {
-      if (!previous) return 5;
-      let changed = 0;
-      for (let i = 0; i < 5; i++) {
-        if (current.team1[i] !== previous.team1[i] || current.team2[i] !== previous.team2[i]) changed++;
-      }
-      return changed;
-    }
-
-    function shuffleTeams() {
-      if (!requireAdmin('팀 섞기')) return;
-      const players = getPlayers();
-      if (players.length !== PLAYER_COUNT || players.some(name => name === '')) {
-        alert('10명의 이름을 모두 입력해야 합니다.');
-        return;
-      }
-      const previousResult = JSON.parse(localStorage.getItem('lastTeams') || 'null');
-      let result = null;
-      let attempts = 0;
-      do {
-        result = makeTeams(players);
-        attempts++;
-      } while (previousResult && countChangedLines(result, previousResult) < 2 && attempts < 50);
-
-      displayTeam('team1', result.team1);
-      displayTeam('team2', result.team2);
-      localStorage.setItem('lastTeams', JSON.stringify(result));
-
-      if (!previousResult) {
-        document.getElementById('teamMessage').textContent = '팀이 섞였습니다.';
-      } else {
-        document.getElementById('teamMessage').textContent = `직전 결과와 ${countChangedLines(result, previousResult)}라인 다르게 섞었습니다.`;
-      }
-    }
-
-    function copyTeams() {
-      if (!requireAdmin('팀 복사')) return;
-      const team1Items = Array.from(document.querySelectorAll('#team1 li')).map(li => li.textContent.trim());
-      const team2Items = Array.from(document.querySelectorAll('#team2 li')).map(li => li.textContent.trim());
-
-      if (team1Items.length !== 5 || team2Items.length !== 5) {
-        alert('먼저 팀을 섞어주세요.');
-        return;
-      }
-
-      let text = '블루\t레드\n';
-      for (let i = 0; i < 5; i++) {
-        text += `${team1Items[i]}\t${team2Items[i]}\n`;
-      }
-
-      navigator.clipboard.writeText(text)
-        .then(() => {
-          document.getElementById('teamMessage').textContent = '블루 / 레드 형식으로 복사되었습니다.';
-        })
-        .catch(() => {
-          const textarea = document.createElement('textarea');
-          textarea.value = text;
-          document.body.appendChild(textarea);
-          textarea.select();
-          document.execCommand('copy');
-          document.body.removeChild(textarea);
-          document.getElementById('teamMessage').textContent = '블루 / 레드 형식으로 복사되었습니다.';
-        });
-    }
-
-    function getSchedules() {
-      return schedulesCache;
-    }
-
-    function startScheduleSync() {
-      onSnapshot(schedulesCollection, (snapshot) => {
-        schedulesCache = snapshot.docs.map((item) => ({
-          id: item.id,
-          ...item.data()
-        }));
-        renderCalendar();
-        updateHitchaCount();
-      }, (error) => {
-        console.error(error);
-        document.getElementById('scheduleMessage').textContent = 'Firebase 연결 오류가 발생했습니다.';
-      });
-    }
-
-    function updateHitchaCount() {
-      const schedules = getSchedules();
-      const targetMonth = String(calendarMonth + 1).padStart(2, '0');
-      const targetYear = String(calendarYear);
-      const count = schedules.filter(item => item.category === '힛차' && item.date && item.date.startsWith(`${targetYear}-${targetMonth}-`)).length;
-      document.getElementById('hitchaCount').textContent = `이번달 힛차 ${count}회`;
-    }
-
-    function formatDateKey(year, month, day) {
-      const mm = String(month + 1).padStart(2, '0');
-      const dd = String(day).padStart(2, '0');
-      return `${year}-${mm}-${dd}`;
-    }
-
-    function getSchedulesForDate(dateKey) {
-      return getSchedules().filter(item => item.date === dateKey);
-    }
-
-    function changeMonth(delta) {
-      calendarMonth += delta;
-      if (calendarMonth < 0) {
-        calendarMonth = 11;
-        calendarYear -= 1;
-      }
-      if (calendarMonth > 11) {
-        calendarMonth = 0;
-        calendarYear += 1;
-      }
-      renderCalendar();
-    }
-
-    function renderCalendar() {
-      const label = document.getElementById('calendarLabel');
-      const daysContainer = document.getElementById('calendarDays');
-      label.textContent = `${calendarYear}년 ${calendarMonth + 1}월`;
-      daysContainer.innerHTML = '';
-      updateHitchaCount();
-
-      const firstDay = new Date(calendarYear, calendarMonth, 1);
-      const startWeekday = firstDay.getDay();
-      const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
-      const prevMonthDays = new Date(calendarYear, calendarMonth, 0).getDate();
-      const today = new Date();
-
-      const cells = [];
-      for (let i = 0; i < startWeekday; i++) {
-        cells.push({ day: prevMonthDays - startWeekday + i + 1, other: true, monthOffset: -1 });
-      }
-      for (let day = 1; day <= daysInMonth; day++) {
-        cells.push({ day, other: false, monthOffset: 0 });
-      }
-      while (cells.length < 35) {
-        cells.push({ day: cells.length - (startWeekday + daysInMonth) + 1, other: true, monthOffset: 1 });
-      }
-
-      cells.forEach(cell => {
-        let cellYear = calendarYear;
-        let cellMonth = calendarMonth + cell.monthOffset;
-        if (cellMonth < 0) { cellMonth = 11; cellYear -= 1; }
-        if (cellMonth > 11) { cellMonth = 0; cellYear += 1; }
-
-        const dateKey = formatDateKey(cellYear, cellMonth, cell.day);
-        const events = getSchedulesForDate(dateKey);
-
-        const dayCell = document.createElement('div');
-        dayCell.className = 'day-cell' + (cell.other ? ' other-month' : '');
-        if (
-          cellYear === today.getFullYear() &&
-          cellMonth === today.getMonth() &&
-          cell.day === today.getDate()
-        ) {
-          dayCell.className += ' today';
-        }
-        dayCell.onclick = () => selectCalendarDate(dateKey);
-
-        const eventHtml = events.slice(0, 3).map(event => `
-          <div class="event-item" onclick="event.stopPropagation(); window.editScheduleById('${event.id}')">
-            <span class="event-bullet" style="background:${categoryColors[event.category] || '#a855f7'}"></span>
-            <span>${event.text || ''}</span>
-            <span class="event-time">${event.time || ''}</span>
-          </div>
-        `).join('');
-
-        const moreHtml = events.length > 3 ? `<div class="event-item" style="color:#94a3b8;">+${events.length - 3}개 더보기</div>` : '';
-
-        dayCell.innerHTML = `
-          <div class="day-number">${cell.day}일</div>
-          <div class="event-list">${eventHtml}${moreHtml}</div>
-        `;
-        daysContainer.appendChild(dayCell);
-      });
-    }
-
-    function selectCalendarDate(dateKey) {
-      document.getElementById('scheduleDate').value = dateKey;
-      selectedScheduleId = null;
-      document.getElementById('scheduleMessage').textContent = `${dateKey} 날짜로 입력할 수 있습니다.`;
-    }
-
-    function openScheduleFormForToday() {
-      if (!requireAdmin('일정 등록')) return;
-      const today = new Date();
-      document.getElementById('scheduleDate').value = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
-      document.getElementById('scheduleTime').value = '';
-      document.getElementById('scheduleText').value = '';
-      document.getElementById('scheduleCategory').value = '방송';
-      selectedScheduleId = null;
-    }
-
-    function clearScheduleInputs() {
-      document.getElementById('scheduleDate').value = '';
-      document.getElementById('scheduleTime').value = '';
-      document.getElementById('scheduleText').value = '';
-      document.getElementById('scheduleCategory').value = '방송';
-      selectedScheduleId = null;
-      document.getElementById('scheduleMessage').textContent = '입력값을 초기화했습니다.';
-    }
-
-    async function saveScheduleFromForm() {
-      if (!requireAdmin('일정 저장')) return;
-
-      const date = document.getElementById('scheduleDate').value;
-      const time = document.getElementById('scheduleTime').value;
-      const text = document.getElementById('scheduleText').value.trim();
-      const category = document.getElementById('scheduleCategory').value;
-
-      if (!date || !text) {
-        alert('날짜와 내용을 입력해주세요.');
-        return;
-      }
-
-      const payload = { date, time, text, category };
-
-      try {
-        if (selectedScheduleId) {
-          await updateDoc(doc(db, "schedules", selectedScheduleId), payload);
-          document.getElementById('scheduleMessage').textContent = '일정을 수정했습니다.';
-        } else {
-          await addDoc(schedulesCollection, payload);
-          document.getElementById('scheduleMessage').textContent = '일정을 추가했습니다.';
-        }
-        clearScheduleInputs();
-      } catch (error) {
-        console.error(error);
-        alert('일정 저장 중 오류가 발생했습니다.');
-      }
-    }
-
-    function editScheduleById(id) {
-      if (!requireAdmin('일정 수정')) return;
-      const item = getSchedules().find(v => v.id === id);
-      if (!item) return;
-      selectedScheduleId = id;
-      document.getElementById('scheduleDate').value = item.date || '';
-      document.getElementById('scheduleTime').value = item.time || '';
-      document.getElementById('scheduleText').value = item.text || '';
-      document.getElementById('scheduleCategory').value = item.category || '기타';
-      document.getElementById('scheduleMessage').textContent = '선택한 일정이 입력창에 불러와졌습니다. 수정 후 저장을 눌러주세요.';
-    }
-
-    async function deleteSelectedSchedule() {
-      if (!requireAdmin('일정 삭제')) return;
-
-      if (!selectedScheduleId) {
-        alert('먼저 수정할 일정 하나를 선택해주세요.');
-        return;
-      }
-      if (!confirm('선택한 일정을 삭제할까요?')) return;
-
-      try {
-        await deleteDoc(doc(db, "schedules", selectedScheduleId));
-        clearScheduleInputs();
-        document.getElementById('scheduleMessage').textContent = '선택한 일정을 삭제했습니다.';
-      } catch (error) {
-        console.error(error);
-        alert('일정 삭제 중 오류가 발생했습니다.');
-      }
-    }
-
-    applySavedTheme();
-    updateAdminButton();
-    loadHeroImage();
-    loadPlayers();
-    startScheduleSync();
-  </script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
