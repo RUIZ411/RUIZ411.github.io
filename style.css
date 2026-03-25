@@ -790,17 +790,11 @@ body.dark .record-block-title {
   font-weight: 800;
 }
 
-/* detail */
 .detail-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-bottom: 18px;
-}
-
-.detail-grid-2 {
-  margin-top: 16px;
-  margin-bottom: 0;
 }
 
 .detail-card {
@@ -850,7 +844,7 @@ body.dark .detail-card {
 }
 
 .relation-message {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .stats-table-wrap {
@@ -861,7 +855,7 @@ body.dark .detail-card {
 .stats-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 420px;
+  min-width: 640px;
 }
 
 .stats-table th,
