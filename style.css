@@ -14,16 +14,16 @@
 }
 
 body.dark {
-  --bg1: #05070c;
-  --bg2: #0b1220;
-  --card: rgba(15,23,42,0.82);
-  --line: rgba(255,255,255,0.08);
+  --bg1: #020617;
+  --bg2: #0f172a;
+  --card: rgba(15,23,42,0.92);
+  --line: rgba(148,163,184,0.22);
   --text: #f8fafc;
-  --muted: #94a3b8;
+  --muted: #cbd5e1;
   --blue: #60a5fa;
   --purple: #a855f7;
   --red: #f87171;
-  --shadow: 0 18px 40px rgba(2, 6, 23, 0.35);
+  --shadow: 0 18px 40px rgba(2, 6, 23, 0.5);
 }
 
 body {
@@ -59,10 +59,15 @@ body {
 .card {
   background: var(--card);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.5);
+  border: 1px solid rgba(255,255,255,0.35);
   border-radius: 28px;
   box-shadow: var(--shadow);
   padding: 28px;
+}
+
+body.dark .card {
+  border: 1px solid rgba(148,163,184,0.18);
+  background: linear-gradient(180deg, rgba(2,6,23,0.86), rgba(15,23,42,0.94));
 }
 
 h1 {
@@ -99,7 +104,7 @@ h2 {
 
 body.dark .hero-badge {
   background: rgba(96,165,250,0.14);
-  color: #bfdbfe;
+  color: #dbeafe;
 }
 
 .hero-image {
@@ -143,8 +148,8 @@ body.dark .hero-badge {
 }
 
 body.dark .mini-glass-btn {
-  background: rgba(15,23,42,0.42);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(30,41,59,0.82);
+  border: 1px solid rgba(148,163,184,0.22);
   color: #e2e8f0;
 }
 
@@ -219,6 +224,12 @@ button:hover { transform: translateY(-1px); }
   font-weight: 700;
 }
 
+body.dark .secondary {
+  background: rgba(226,232,240,0.95);
+  color: #1e3a8a;
+  border: 1px solid rgba(255,255,255,0.7);
+}
+
 .danger {
   background: #fee2e2;
   color: #b91c1c;
@@ -240,8 +251,8 @@ input, textarea, select {
   border-radius: 14px;
   font-size: 15px;
   font-family: inherit;
-  background: rgba(255,255,255,0.9);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  background: rgba(255,255,255,0.94);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
   color: var(--text);
 }
 
@@ -249,6 +260,31 @@ input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: #93c5fd;
   box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
+}
+
+body.dark input,
+body.dark textarea,
+body.dark select {
+  background: rgba(30,41,59,0.96);
+  color: #f8fafc;
+  border: 1px solid rgba(148,163,184,0.28);
+}
+
+body.dark input::placeholder,
+body.dark textarea::placeholder {
+  color: #cbd5e1;
+}
+
+body.dark input:focus,
+body.dark textarea:focus,
+body.dark select:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(96,165,250,0.18);
 }
 
 .btn-row {
@@ -282,6 +318,16 @@ input:focus, textarea:focus, select:focus {
   border: 1px solid rgba(239,68,68,0.16);
 }
 
+body.dark .team-box:first-child {
+  background: linear-gradient(180deg, rgba(37,99,235,0.18), rgba(15,23,42,0.92));
+  border: 1px solid rgba(96,165,250,0.24);
+}
+
+body.dark .team-box:last-child {
+  background: linear-gradient(180deg, rgba(220,38,38,0.18), rgba(15,23,42,0.92));
+  border: 1px solid rgba(248,113,113,0.24);
+}
+
 .team-title {
   font-size: 24px;
   font-weight: 800;
@@ -308,9 +354,9 @@ li {
 }
 
 body.dark .message {
-  background: rgba(30, 41, 59, 0.8);
-  color: #cbd5e1;
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(30, 41, 59, 0.86);
+  color: #e2e8f0;
+  border: 1px solid rgba(148,163,184,0.18);
 }
 
 .calendar-page {
@@ -558,7 +604,7 @@ body.dark .message {
 }
 
 .summary-box {
-  background: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.78);
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 18px;
@@ -566,7 +612,9 @@ body.dark .message {
 }
 
 body.dark .summary-box {
-  background: rgba(15,23,42,0.72);
+  background: linear-gradient(180deg, rgba(15,23,42,0.96), rgba(2,6,23,0.92));
+  border: 1px solid rgba(96,165,250,0.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
 .summary-box span {
@@ -575,6 +623,10 @@ body.dark .summary-box {
   color: var(--muted);
   margin-bottom: 8px;
   font-weight: 700;
+}
+
+body.dark .summary-box span {
+  color: #cbd5e1;
 }
 
 .summary-box strong {
@@ -607,12 +659,12 @@ body.dark .summary-box {
 }
 
 .record-item {
-  background: rgba(255,255,255,0.72);
+  background: rgba(255,255,255,0.78);
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 18px;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .record-item:hover {
@@ -625,7 +677,16 @@ body.dark .summary-box {
 }
 
 body.dark .record-item {
-  background: rgba(15,23,42,0.72);
+  background: linear-gradient(180deg, rgba(8,19,44,0.98), rgba(2,6,23,0.96));
+  border: 1px solid rgba(96,165,250,0.32);
+  box-shadow: 0 10px 24px rgba(2,6,23,0.35);
+}
+
+body.dark .record-item.selected {
+  border-color: #60a5fa;
+  box-shadow:
+    0 0 0 3px rgba(96,165,250,0.18),
+    0 10px 24px rgba(2,6,23,0.35);
 }
 
 .record-item-top {
@@ -652,8 +713,9 @@ body.dark .record-item {
 }
 
 body.dark .record-badge {
-  background: rgba(96,165,250,0.14);
-  color: #bfdbfe;
+  background: rgba(59,130,246,0.18);
+  color: #dbeafe;
+  border: 1px solid rgba(96,165,250,0.18);
 }
 
 .record-result-win {
@@ -667,11 +729,15 @@ body.dark .record-badge {
 }
 
 body.dark .record-result-win {
+  background: rgba(34,197,94,0.16);
   color: #86efac;
+  border: 1px solid rgba(74,222,128,0.16);
 }
 
 body.dark .record-result-lose {
+  background: rgba(239,68,68,0.16);
   color: #fca5a5;
+  border: 1px solid rgba(248,113,113,0.16);
 }
 
 .record-date {
@@ -687,14 +753,15 @@ body.dark .record-result-lose {
 }
 
 .record-block {
-  background: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.58);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 12px;
 }
 
 body.dark .record-block {
-  background: rgba(2,6,23,0.26);
+  background: rgba(15,23,42,0.88);
+  border: 1px solid rgba(148,163,184,0.18);
 }
 
 .record-block-title {
@@ -702,6 +769,10 @@ body.dark .record-block {
   font-weight: 800;
   color: var(--muted);
   margin-bottom: 8px;
+}
+
+body.dark .record-block-title {
+  color: #cbd5e1;
 }
 
 .record-members {
