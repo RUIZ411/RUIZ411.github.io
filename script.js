@@ -624,17 +624,31 @@ function startRecordSync() {
 
 function updateRecordSummary() {
   const totalGames = recordsCache.length;
-  const totalWins = recordsCache.filter((item) => item.result === "승리").length;
-  const totalLosses = recordsCache.filter((item) => item.result === "패배").length;
-  const totalPureKills = recordsCache.reduce(
-    (sum, item) => sum + Number(item.pureKills || 0),
-    0
+
+  const killRecords = recordsCache.filter((item) => item.type === "킬내기");
+  const mixedRecords = recordsCache.filter(
+    (item) => item.type === "랜드" || item.type === "공장" || item.type === "GKL"
   );
 
+  const killWins = killRecords.filter((item) => item.result === "승리").length;
+  const mixedWins = mixedRecords.filter((item) => item.result === "승리").length;
+
+  const killLosses = killRecords.filter((item) => item.result === "패배").length;
+  const mixedLosses = mixedRecords.filter((item) => item.result === "패배").length;
+
+  const overallWins = recordsCache.filter((item) => item.result === "승리").length;
+
+  const killWinRate =
+    killRecords.length > 0 ? ((killWins / killRecords.length) * 100).toFixed(2) : "0.00";
+
+  const overallWinRate =
+    totalGames > 0 ? ((overallWins / totalGames) * 100).toFixed(2) : "0.00";
+
   document.getElementById("recordTotalGames").textContent = totalGames;
-  document.getElementById("recordTotalWins").textContent = totalWins;
-  document.getElementById("recordTotalLosses").textContent = totalLosses;
-  document.getElementById("recordTotalPureKills").textContent = totalPureKills;
+  document.getElementById("recordWinBreakdown").textContent = `${killWins} / ${mixedWins}`;
+  document.getElementById("recordLossBreakdown").textContent = `${killLosses} / ${mixedLosses}`;
+  document.getElementById("recordKillWinRate").textContent = `${killWinRate}%`;
+  document.getElementById("recordOverallWinRate").textContent = `${overallWinRate}%`;
 }
 
 function renderRecords() {
