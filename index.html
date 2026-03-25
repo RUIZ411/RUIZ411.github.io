@@ -45,13 +45,14 @@
         <h1>메인 페이지</h1>
         <div class="desc">
           원하는 메뉴를 눌러 해당 기능으로 이동하세요.<br />
-          팀 섞기, 스케줄, 전적 기록을 한 번에 관리할 수 있습니다.
+          팀 섞기, 스케줄, 전적 기록, 전적 상세를 한 번에 관리할 수 있습니다.
         </div>
 
-        <div class="menu-grid menu-grid-3">
+        <div class="menu-grid">
           <button class="menu-btn" onclick="showPage('teamPage')">팀 섞기</button>
           <button class="menu-btn" onclick="showPage('schedulePage')">스케줄</button>
           <button class="menu-btn" onclick="showPage('recordPage')">전적 기록</button>
+          <button class="menu-btn" onclick="showPage('detailPage')">전적 상세</button>
         </div>
       </div>
     </div>
@@ -268,6 +269,66 @@
 
         <div class="message" id="recordMessage">전적 정보를 입력하고 저장 버튼을 눌러주세요.</div>
         <div id="recordList" class="record-list"></div>
+      </div>
+    </div>
+
+    <div id="detailPage" class="page">
+      <div class="card">
+        <div class="top-bar">
+          <button class="secondary" onclick="showPage('homePage')">메인으로</button>
+          <button class="primary" onclick="renderDetailPage()">새로고침</button>
+        </div>
+
+        <h2>전적 상세</h2>
+        <div class="desc">
+          저장된 전적을 기준으로 밸런스, 이번 달, 맵별 승률과 멤버 관계 통계를 보여줍니다.
+        </div>
+
+        <div class="detail-grid">
+          <div class="detail-card">
+            <h3 class="detail-title">밸런스별 승률</h3>
+            <div id="detailBalanceTable"></div>
+          </div>
+
+          <div class="detail-card">
+            <h3 class="detail-title">이번 달 승률</h3>
+            <div id="detailMonthTable"></div>
+          </div>
+
+          <div class="detail-card full-span">
+            <h3 class="detail-title">맵별 승률</h3>
+            <div id="detailMapTable"></div>
+          </div>
+        </div>
+
+        <div class="detail-card relation-search-card">
+          <h3 class="detail-title">멤버 관계 승률</h3>
+          <div class="desc detail-desc">
+            기준 멤버 이름 1명을 입력하면, 다른 멤버와 같은 팀일 때 / 적팀일 때 승률을 보여줍니다.
+          </div>
+
+          <div class="relation-search-row">
+            <input type="text" id="memberRelationInput" placeholder="예: 민서" />
+            <button class="primary" onclick="renderMemberRelationStats()">검색</button>
+            <button class="secondary" onclick="clearMemberRelationStats()">초기화</button>
+          </div>
+
+          <div id="memberRelationSummary" class="message relation-message">
+            기준 멤버 이름을 입력해 주세요.
+          </div>
+
+          <div class="detail-grid detail-grid-2">
+            <div class="detail-card inner-detail-card">
+              <h3 class="detail-title small">같은 팀일 때 승률</h3>
+              <div id="sameTeamTable"></div>
+            </div>
+
+            <div class="detail-card inner-detail-card">
+              <h3 class="detail-title small">적팀일 때 승률</h3>
+              <div id="enemyTeamTable"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
