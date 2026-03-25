@@ -873,38 +873,6 @@ function setDefaultRecordDate() {
     `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 
-/* detail helpers */
-
-function renderDetailPage() {
-  renderBalanceStats();
-  renderMonthStats();
-  renderMapStats();
-
-  const input = document.getElementById("memberRelationInput");
-  if (input && input.value.trim()) {
-    renderMemberRelationStats();
-  }
-}
-
-function getWinLossFromPerspective(record, targetName) {
-  const myTeam = normalizeMembers(record.myTeam);
-  const enemyTeam = normalizeMembers(record.enemyTeam);
-  const isInMyTeam = myTeam.includes(targetName);
-  const isInEnemyTeam = enemyTeam.includes(targetName);
-
-  if (!isInMyTeam && !isInEnemyTeam) {
-    return null;
-  }
-
-  const myTeamWon = record.result === "승리";
-
-  if (isInMyTeam) {
-    return myTeamWon ? "승리" : "패배";
-  }
-
-  return myTeamWon ? "패배" : "승리";
-}
-
 function normalizeMembers(members) {
   if (!Array.isArray(members)) return [];
   return members
@@ -1017,14 +985,47 @@ function renderMapStats() {
     makeStatsTable(["종류", "전적", "승률"], rows);
 }
 
+function getWinLossFromPerspective(record, targetName) {
+  const myTeam = normalizeMembers(record.myTeam);
+  const enemyTeam = normalizeMembers(record.enemyTeam);
+  const isInMyTeam = myTeam.includes(targetName);
+  const isInEnemyTeam = enemyTeam.includes(targetName);
+
+  if (!isInMyTeam && !isInEnemyTeam) {
+    return null;
+  }
+
+  const myTeamWon = record.result === "승리";
+
+  if (isInMyTeam) {
+    return myTeamWon ? "승리" : "패배";
+  }
+
+  return myTeamWon ? "패배" : "승리";
+}
+
+function renderDetailPage() {
+  renderBalanceStats();
+  renderMonthStats();
+  renderMapStats();
+
+  const input = document.getElementById("memberRelationInput");
+  if (input && input.value.trim()) {
+    renderMemberRelationStats();
+  } else {
+    document.getElementById("memberRelationTable").innerHTML =
+      `<div class="empty-stats">기준 멤버를 검색해 주세요.</div>`;
+  }
+}
+
 function clearMemberRelationStats() {
   const input = document.getElementById("memberRelationInput");
   if (input) input.value = "";
 
-  document.getElementById("memberRelationSummary").textContent = "기준 멤버 이름을 입력해 주세요.";
-  document.getElementById("sameTeamTable").innerHTML =
-    `<div class="empty-stats">기준 멤버를 검색해 주세요.</div>`;
-  document.getElementById("enemyTeamTable").innerHTML =
+  document.getElementById("memberRelationSummary").textContent =
+    "기준 멤버 이름을 입력해 주세요.";
+
+  document.getElementById("memberRelationTable").innerHTML =
     `<div class="empty-stats">기준 멤버를 검색해 주세요.</div>`;
 }
 
@@ -1037,7 +1038,7 @@ function renderMemberRelationStats() {
     return;
   }
 
-  const normalizedTarget = rawName;
+  const targetName = rawName;
   const targetGames = [];
   const allMembersSet = new Set();
 
@@ -1048,40 +1049,46 @@ function renderMemberRelationStats() {
     myTeam.forEach((name) => allMembersSet.add(name));
     enemyTeam.forEach((name) => allMembersSet.add(name));
 
-    if (myTeam.includes(normalizedTarget) || enemyTeam.includes(normalizedTarget)) {
+    if (myTeam.includes(targetName) || enemyTeam.includes(targetName)) {
       targetGames.push(record);
     }
   });
 
   if (!targetGames.length) {
     document.getElementById("memberRelationSummary").textContent =
-      `${rawName} 이름이 포함된 전적이 없습니다.`;
-    document.getElementById("sameTeamTable").innerHTML =
-      `<div class="empty-stats">같은 팀 데이터가 없습니다.</div>`;
-    document.getElementById("enemyTeamTable").innerHTML =
-      `<div class="empty-stats">적팀 데이터가 없습니다.</div>`;
+      `${targetName} 이름이 포함된 전적이 없습니다.`;
+
+    document.getElementById("memberRelationTable").innerHTML =
+      `<div class="empty-stats">관계 데이터를 찾지 못했습니다.</div>`;
     return;
   }
 
-  const targetPerspectiveResults = targetGames.map((record) => ({
-    record,
-    perspective: getWinLossFromPerspective(record, normalizedTarget)
-  })).filter((item) => item.perspective);
+  const targetPerspectiveResults = targetGames
+    .map((record) => ({
+      record,
+      perspective: getWinLossFromPerspective(record, targetName)
+    }))
+    .filter((item) => item.perspective);
 
-  const targetWins = targetPerspectiveResults.filter((item) => item.perspective === "승리").length;
-  const targetLosses = targetPerspectiveResults.filter((item) => item.perspective === "패배").length;
+  const targetWins = targetPerspectiveResults.filter(
+    (item) => item.perspective === "승리"
+  ).length;
+  const targetLosses = targetPerspectiveResults.filter(
+    (item) => item.perspective === "패배"
+  ).length;
   const targetTotal = targetWins + targetLosses;
   const targetRate = calcRate(targetWins, targetTotal);
 
   document.getElementById("memberRelationSummary").textContent =
-    `${rawName} 기준 전체 전적: ${targetWins}승 ${targetLosses}패 / ${targetRate}`;
+    `${targetName} 기준 전체 전적: ${targetWins}승 ${targetLosses}패 / ${targetRate}`;
 
-  const otherMembers = Array.from(allMembersSet).filter((name) => name !== normalizedTarget);
+  const otherMembers = Array.from(allMembersSet).filter(
+    (name) => name !== targetName
+  );
 
-  const sameRows = [];
-  const enemyRows = [];
+  const rows = [];
 
-  otherMembers.forEach((other) => {
+  otherMembers.forEach((otherName) => {
     let sameWins = 0;
     let sameLosses = 0;
     let enemyWins = 0;
@@ -1091,21 +1098,21 @@ function renderMemberRelationStats() {
       const myTeam = normalizeMembers(record.myTeam);
       const enemyTeam = normalizeMembers(record.enemyTeam);
 
-      const targetInMy = myTeam.includes(normalizedTarget);
-      const targetInEnemy = enemyTeam.includes(normalizedTarget);
-      const otherInMy = myTeam.includes(other);
-      const otherInEnemy = enemyTeam.includes(other);
+      const targetInMy = myTeam.includes(targetName);
+      const targetInEnemy = enemyTeam.includes(targetName);
+      const otherInMy = myTeam.includes(otherName);
+      const otherInEnemy = enemyTeam.includes(otherName);
 
       if (!(targetInMy || targetInEnemy)) return;
 
-      const targetPerspective = getWinLossFromPerspective(record, normalizedTarget);
+      const targetPerspective = getWinLossFromPerspective(record, targetName);
       if (!targetPerspective) return;
 
       const sameTeam =
         (targetInMy && otherInMy) ||
         (targetInEnemy && otherInEnemy);
 
-      const versusTeam =
+      const enemyTeamMatch =
         (targetInMy && otherInEnemy) ||
         (targetInEnemy && otherInMy);
 
@@ -1114,7 +1121,7 @@ function renderMemberRelationStats() {
         else sameLosses++;
       }
 
-      if (versusTeam) {
+      if (enemyTeamMatch) {
         if (targetPerspective === "승리") enemyWins++;
         else enemyLosses++;
       }
@@ -1123,33 +1130,30 @@ function renderMemberRelationStats() {
     const sameTotal = sameWins + sameLosses;
     const enemyTotal = enemyWins + enemyLosses;
 
-    if (sameTotal > 0) {
-      sameRows.push([
-        other,
-        `${sameTotal}경기`,
-        `${sameWins}승 ${sameLosses}패`,
-        calcRate(sameWins, sameTotal)
-      ]);
-    }
+    if (sameTotal === 0 && enemyTotal === 0) return;
 
-    if (enemyTotal > 0) {
-      enemyRows.push([
-        other,
-        `${enemyTotal}경기`,
-        `${enemyWins}승 ${enemyLosses}패`,
-        calcRate(enemyWins, enemyTotal)
-      ]);
-    }
+    rows.push([
+      otherName,
+      `${sameTotal}경기`,
+      `${sameWins}승 ${sameLosses}패`,
+      calcRate(sameWins, sameTotal),
+      `${enemyTotal}경기`,
+      `${enemyWins}승 ${enemyLosses}패`,
+      calcRate(enemyWins, enemyTotal)
+    ]);
   });
 
-  sameRows.sort((a, b) => parseFloat(b[3]) - parseFloat(a[3]));
-  enemyRows.sort((a, b) => parseFloat(b[3]) - parseFloat(a[3]));
+  rows.sort((a, b) => {
+    const aSame = parseFloat(a[3]);
+    const bSame = parseFloat(b[3]);
+    return bSame - aSame;
+  });
 
-  document.getElementById("sameTeamTable").innerHTML =
-    makeStatsTable(["같이 한 멤버", "경기 수", "전적", "승률"], sameRows);
-
-  document.getElementById("enemyTeamTable").innerHTML =
-    makeStatsTable(["상대한 멤버", "경기 수", "전적", "승률"], enemyRows);
+  document.getElementById("memberRelationTable").innerHTML =
+    makeStatsTable(
+      ["멤버", "같이 경기", "같이 전적", "같이 승률", "상대 경기", "상대 전적", "상대 승률"],
+      rows
+    );
 }
 
 function escapeHtml(value) {
