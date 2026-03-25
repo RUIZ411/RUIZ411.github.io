@@ -553,6 +553,10 @@ body.dark .message {
   margin-bottom: 18px;
 }
 
+.record-summary-5 {
+  grid-template-columns: repeat(5, 1fr);
+}
+
 .summary-box {
   background: rgba(255,255,255,0.7);
   border: 1px solid var(--line);
@@ -716,7 +720,8 @@ body.dark .record-block {
     grid-template-columns: 1fr 1fr;
   }
 
-  .record-summary {
+  .record-summary,
+  .record-summary-5 {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -740,7 +745,9 @@ body.dark .record-block {
   .grid,
   .record-form-grid,
   .record-team-grid,
-  .record-meta-grid {
+  .record-meta-grid,
+  .record-summary,
+  .record-summary-5 {
     grid-template-columns: 1fr;
   }
 
