@@ -70,6 +70,10 @@ window.clearRecordInputs = clearRecordInputs;
 window.selectRecord = selectRecord;
 window.deleteSelectedRecord = deleteSelectedRecord;
 
+window.renderDetailPage = renderDetailPage;
+window.renderMemberRelationStats = renderMemberRelationStats;
+window.clearMemberRelationStats = clearMemberRelationStats;
+
 function isAdminUnlocked() {
   return localStorage.getItem("adminUnlocked") === "true";
 }
@@ -177,6 +181,10 @@ function showPage(pageId) {
 
   if (pageId === "schedulePage") {
     renderCalendar();
+  }
+
+  if (pageId === "detailPage") {
+    renderDetailPage();
   }
 }
 
@@ -636,6 +644,7 @@ function startRecordSync() {
 
       renderRecords();
       updateRecordSummary();
+      renderDetailPage();
     },
     (error) => {
       console.error(error);
@@ -864,6 +873,285 @@ function setDefaultRecordDate() {
     `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 
+/* detail helpers */
+
+function renderDetailPage() {
+  renderBalanceStats();
+  renderMonthStats();
+  renderMapStats();
+
+  const input = document.getElementById("memberRelationInput");
+  if (input && input.value.trim()) {
+    renderMemberRelationStats();
+  }
+}
+
+function getWinLossFromPerspective(record, targetName) {
+  const myTeam = normalizeMembers(record.myTeam);
+  const enemyTeam = normalizeMembers(record.enemyTeam);
+  const isInMyTeam = myTeam.includes(targetName);
+  const isInEnemyTeam = enemyTeam.includes(targetName);
+
+  if (!isInMyTeam && !isInEnemyTeam) {
+    return null;
+  }
+
+  const myTeamWon = record.result === "승리";
+
+  if (isInMyTeam) {
+    return myTeamWon ? "승리" : "패배";
+  }
+
+  return myTeamWon ? "패배" : "승리";
+}
+
+function normalizeMembers(members) {
+  if (!Array.isArray(members)) return [];
+  return members
+    .map((v) => String(v || "").trim())
+    .filter((v) => v !== "");
+}
+
+function calcRate(wins, total) {
+  if (!total) return "0.00%";
+  return ((wins / total) * 100).toFixed(2) + "%";
+}
+
+function summarizeRecordList(list) {
+  const wins = list.filter((item) => item.result === "승리").length;
+  const losses = list.filter((item) => item.result === "패배").length;
+  const total = wins + losses;
+
+  return {
+    wins,
+    losses,
+    total,
+    rate: calcRate(wins, total)
+  };
+}
+
+function makeStatsTable(headers, rows) {
+  if (!rows.length) {
+    return `<div class="empty-stats">표시할 데이터가 없습니다.</div>`;
+  }
+
+  const thead = `
+    <thead>
+      <tr>
+        ${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}
+      </tr>
+    </thead>
+  `;
+
+  const tbody = `
+    <tbody>
+      ${rows.map((row) => `
+        <tr>
+          ${row.map((cell) => `<td>${escapeHtml(String(cell))}</td>`).join("")}
+        </tr>
+      `).join("")}
+    </tbody>
+  `;
+
+  return `<div class="stats-table-wrap"><table class="stats-table">${thead}${tbody}</table></div>`;
+}
+
+function renderBalanceStats() {
+  const balanceGroups = {};
+
+  recordsCache.forEach((item) => {
+    const key = (item.balance || "미입력").trim() || "미입력";
+    if (!balanceGroups[key]) balanceGroups[key] = [];
+    balanceGroups[key].push(item);
+  });
+
+  const rows = Object.keys(balanceGroups)
+    .sort((a, b) => a.localeCompare(b, "ko"))
+    .map((key) => {
+      const stat = summarizeRecordList(balanceGroups[key]);
+      return [key, `${stat.wins}승 ${stat.losses}패`, stat.rate];
+    });
+
+  document.getElementById("detailBalanceTable").innerHTML =
+    makeStatsTable(["밸런스", "전적", "승률"], rows);
+}
+
+function isThisMonth(dateStr) {
+  if (!dateStr) return false;
+
+  const date = new Date(dateStr);
+  const now = new Date();
+
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth()
+  );
+}
+
+function renderMonthStats() {
+  const monthRecords = recordsCache.filter((item) => isThisMonth(item.date));
+
+  const kill = summarizeRecordList(monthRecords.filter((item) => item.type === "킬내기"));
+  const land = summarizeRecordList(monthRecords.filter((item) => item.type === "랜드"));
+  const gkl = summarizeRecordList(monthRecords.filter((item) => item.type === "GKL"));
+  const factory = summarizeRecordList(monthRecords.filter((item) => item.type === "공장"));
+
+  const rows = [
+    ["킬내기", `${kill.wins}승 ${kill.losses}패`, kill.rate],
+    ["랜드", `${land.wins}승 ${land.losses}패`, land.rate],
+    ["GKL", `${gkl.wins}승 ${gkl.losses}패`, gkl.rate],
+    ["공장", `${factory.wins}승 ${factory.losses}패`, factory.rate]
+  ];
+
+  document.getElementById("detailMonthTable").innerHTML =
+    makeStatsTable(["이번 달 항목", "전적", "승률"], rows);
+}
+
+function renderMapStats() {
+  const rows = ["킬내기", "랜드", "GKL", "공장"].map((type) => {
+    const stat = summarizeRecordList(recordsCache.filter((item) => item.type === type));
+    return [type, `${stat.wins}승 ${stat.losses}패`, stat.rate];
+  });
+
+  document.getElementById("detailMapTable").innerHTML =
+    makeStatsTable(["종류", "전적", "승률"], rows);
+}
+
+function clearMemberRelationStats() {
+  const input = document.getElementById("memberRelationInput");
+  if (input) input.value = "";
+
+  document.getElementById("memberRelationSummary").textContent = "기준 멤버 이름을 입력해 주세요.";
+  document.getElementById("sameTeamTable").innerHTML =
+    `<div class="empty-stats">기준 멤버를 검색해 주세요.</div>`;
+  document.getElementById("enemyTeamTable").innerHTML =
+    `<div class="empty-stats">기준 멤버를 검색해 주세요.</div>`;
+}
+
+function renderMemberRelationStats() {
+  const input = document.getElementById("memberRelationInput");
+  const rawName = input ? input.value.trim() : "";
+
+  if (!rawName) {
+    clearMemberRelationStats();
+    return;
+  }
+
+  const normalizedTarget = rawName;
+  const targetGames = [];
+  const allMembersSet = new Set();
+
+  recordsCache.forEach((record) => {
+    const myTeam = normalizeMembers(record.myTeam);
+    const enemyTeam = normalizeMembers(record.enemyTeam);
+
+    myTeam.forEach((name) => allMembersSet.add(name));
+    enemyTeam.forEach((name) => allMembersSet.add(name));
+
+    if (myTeam.includes(normalizedTarget) || enemyTeam.includes(normalizedTarget)) {
+      targetGames.push(record);
+    }
+  });
+
+  if (!targetGames.length) {
+    document.getElementById("memberRelationSummary").textContent =
+      `${rawName} 이름이 포함된 전적이 없습니다.`;
+    document.getElementById("sameTeamTable").innerHTML =
+      `<div class="empty-stats">같은 팀 데이터가 없습니다.</div>`;
+    document.getElementById("enemyTeamTable").innerHTML =
+      `<div class="empty-stats">적팀 데이터가 없습니다.</div>`;
+    return;
+  }
+
+  const targetPerspectiveResults = targetGames.map((record) => ({
+    record,
+    perspective: getWinLossFromPerspective(record, normalizedTarget)
+  })).filter((item) => item.perspective);
+
+  const targetWins = targetPerspectiveResults.filter((item) => item.perspective === "승리").length;
+  const targetLosses = targetPerspectiveResults.filter((item) => item.perspective === "패배").length;
+  const targetTotal = targetWins + targetLosses;
+  const targetRate = calcRate(targetWins, targetTotal);
+
+  document.getElementById("memberRelationSummary").textContent =
+    `${rawName} 기준 전체 전적: ${targetWins}승 ${targetLosses}패 / ${targetRate}`;
+
+  const otherMembers = Array.from(allMembersSet).filter((name) => name !== normalizedTarget);
+
+  const sameRows = [];
+  const enemyRows = [];
+
+  otherMembers.forEach((other) => {
+    let sameWins = 0;
+    let sameLosses = 0;
+    let enemyWins = 0;
+    let enemyLosses = 0;
+
+    targetGames.forEach((record) => {
+      const myTeam = normalizeMembers(record.myTeam);
+      const enemyTeam = normalizeMembers(record.enemyTeam);
+
+      const targetInMy = myTeam.includes(normalizedTarget);
+      const targetInEnemy = enemyTeam.includes(normalizedTarget);
+      const otherInMy = myTeam.includes(other);
+      const otherInEnemy = enemyTeam.includes(other);
+
+      if (!(targetInMy || targetInEnemy)) return;
+
+      const targetPerspective = getWinLossFromPerspective(record, normalizedTarget);
+      if (!targetPerspective) return;
+
+      const sameTeam =
+        (targetInMy && otherInMy) ||
+        (targetInEnemy && otherInEnemy);
+
+      const versusTeam =
+        (targetInMy && otherInEnemy) ||
+        (targetInEnemy && otherInMy);
+
+      if (sameTeam) {
+        if (targetPerspective === "승리") sameWins++;
+        else sameLosses++;
+      }
+
+      if (versusTeam) {
+        if (targetPerspective === "승리") enemyWins++;
+        else enemyLosses++;
+      }
+    });
+
+    const sameTotal = sameWins + sameLosses;
+    const enemyTotal = enemyWins + enemyLosses;
+
+    if (sameTotal > 0) {
+      sameRows.push([
+        other,
+        `${sameTotal}경기`,
+        `${sameWins}승 ${sameLosses}패`,
+        calcRate(sameWins, sameTotal)
+      ]);
+    }
+
+    if (enemyTotal > 0) {
+      enemyRows.push([
+        other,
+        `${enemyTotal}경기`,
+        `${enemyWins}승 ${enemyLosses}패`,
+        calcRate(enemyWins, enemyTotal)
+      ]);
+    }
+  });
+
+  sameRows.sort((a, b) => parseFloat(b[3]) - parseFloat(a[3]));
+  enemyRows.sort((a, b) => parseFloat(b[3]) - parseFloat(a[3]));
+
+  document.getElementById("sameTeamTable").innerHTML =
+    makeStatsTable(["같이 한 멤버", "경기 수", "전적", "승률"], sameRows);
+
+  document.getElementById("enemyTeamTable").innerHTML =
+    makeStatsTable(["상대한 멤버", "경기 수", "전적", "승률"], enemyRows);
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -880,3 +1168,4 @@ loadPlayers();
 setDefaultRecordDate();
 startScheduleSync();
 startRecordSync();
+clearMemberRelationStats();
