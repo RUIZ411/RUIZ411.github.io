@@ -1,405 +1,219 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SUWEET TOOL</title>
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-
-<div class="app">
-
-  <!-- HOME -->
-  <div id="homePage" class="page active">
-    <div class="home-shell">
-
-      <div class="card home-main-card">
-        <div class="top-bar home-top-bar">
-          <button class="secondary" onclick="toggleDarkMode()" id="themeToggleBtn">다크모드</button>
-          <button class="secondary" onclick="toggleAdminLock()" id="adminToggleBtn">관리자 잠금 해제</button>
-        </div>
-
-        <div class="hero-badge">SUWEET TOOL</div>
-
-        <div class="hero-image-wrap">
-          <img
-            id="heroImage"
-            class="hero-image"
-            alt="메인 이미지"
-            src="https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80"
-          />
-        </div>
-
-        <div class="image-upload-row">
-          <label class="mini-glass-btn" for="heroImageInput" onclick="return requireAdmin('이미지 변경')">이미지 추가</label>
-          <button class="mini-glass-btn" onclick="resetHeroImage()">이미지 초기화</button>
-          <input id="heroImageInput" class="hidden-file-input" type="file" accept="image/*" onchange="handleHeroImageUpload(event)" />
-        </div>
-
-        <h1>메인 페이지</h1>
-
-        <div class="desc">
-          원하는 메뉴를 눌러 해당 기능으로 이동하세요.<br />
-          팀 섞기, 스케줄, 전적 기록, 전적 상세를 한 번에 관리할 수 있습니다.
-        </div>
-
-        <div class="menu-grid">
-          <button class="menu-btn" onclick="showPage('teamPage')">팀 섞기</button>
-          <button class="menu-btn" onclick="showPage('schedulePage')">스케줄</button>
-          <button class="menu-btn" onclick="showPage('recordPage')">전적 기록</button>
-          <button class="menu-btn" onclick="showPage('detailPage')">전적 상세</button>
-        </div>
-      </div>
-
-      <!-- RIGHT MINI GAME -->
-      <aside class="home-side-games">
-        <div class="side-games-panel">
-          <div class="side-games-title">미니게임</div>
-
-          <button class="side-game-btn apple" onclick="showPage('appleGamePage')">
-            🍎 사과게임
-          </button>
-
-          <button class="side-game-btn aim" onclick="showPage('aimPracticePage')">
-            🎯 에임연습
-          </button>
-        </div>
-      </aside>
-
-    </div>
-  </div>
-
-    <div id="teamPage" class="page">
-      <div class="card">
-        <div class="top-bar">
-          <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-        </div>
-
-        <h2>5 vs 5 팀 섞기</h2>
-        <div class="desc">
-          입력 순서대로 2명씩 같은 티어로 인식합니다. (1-2 / 3-4 / 5-6 / 7-8 / 9-10)
-        </div>
-
-        <div class="grid">
-          <input type="text" id="player1" placeholder="플레이어 1" />
-          <input type="text" id="player2" placeholder="플레이어 2" />
-          <input type="text" id="player3" placeholder="플레이어 3" />
-          <input type="text" id="player4" placeholder="플레이어 4" />
-          <input type="text" id="player5" placeholder="플레이어 5" />
-          <input type="text" id="player6" placeholder="플레이어 6" />
-          <input type="text" id="player7" placeholder="플레이어 7" />
-          <input type="text" id="player8" placeholder="플레이어 8" />
-          <input type="text" id="player9" placeholder="플레이어 9" />
-          <input type="text" id="player10" placeholder="플레이어 10" />
-        </div>
-
-        <div class="btn-row">
-          <button class="primary" onclick="shuffleTeams()">팀 섞기</button>
-          <button class="secondary" onclick="copyTeams()">복사</button>
-          <button class="secondary" onclick="resetPlayers()">멤버 초기화</button>
-        </div>
-
-        <div class="teams">
-          <div class="team-box">
-            <div class="team-title">블루</div>
-            <ul id="team1"></ul>
-          </div>
-          <div class="team-box">
-            <div class="team-title">레드</div>
-            <ul id="team2"></ul>
-          </div>
-        </div>
-
-        <div class="message" id="teamMessage">
-          한 번 입력한 멤버는 저장되며, 다음 섞기 때는 직전 결과와 최소 2라인 이상 다르게 섞습니다.
-        </div>
-      </div>
-    </div>
-
-    <div id="schedulePage" class="page">
-      <div class="calendar-page">
-        <div class="calendar-top">
-          <div>
-            <div class="calendar-chip">SUWEET CALENDAR</div>
-            <h2 class="calendar-title">캘린더</h2>
-          </div>
-
-          <div class="calendar-actions">
-            <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-            <button class="primary" onclick="openScheduleFormForToday()">일정 등록</button>
-            <div class="calendar-chip" id="hitchaCount">이번달 힛차 0회</div>
-          </div>
-        </div>
-
-        <div class="calendar-nav">
-          <button onclick="changeMonth(-1)">◀</button>
-          <div class="calendar-label" id="calendarLabel">2026년 3월</div>
-          <button onclick="changeMonth(1)">▶</button>
-        </div>
-
-        <div class="calendar-toolbar">
-          <div class="calendar-legend">
-            <span><span class="legend-dot" style="background:#3b82f6"></span>방송</span>
-            <span><span class="legend-dot" style="background:#22c55e"></span>방송예정</span>
-            <span><span class="legend-dot" style="background:#06b6d4"></span>합방</span>
-            <span><span class="legend-dot" style="background:#ef4444"></span>힛차</span>
-            <span><span class="legend-dot" style="background:#a855f7"></span>기타</span>
-          </div>
-          <div class="calendar-chip">날짜를 누르면 해당 날짜로 바로 입력됩니다.</div>
-        </div>
-
-        <div class="calendar-grid">
-          <div class="calendar-weekdays">
-            <div class="weekday">일</div>
-            <div class="weekday">월</div>
-            <div class="weekday">화</div>
-            <div class="weekday">수</div>
-            <div class="weekday">목</div>
-            <div class="weekday">금</div>
-            <div class="weekday">토</div>
-          </div>
-          <div class="calendar-days" id="calendarDays"></div>
-        </div>
-
-        <div class="calendar-panel">
-          <h3>일정 등록 / 수정</h3>
-
-          <div class="event-form">
-            <input type="date" id="scheduleDate" />
-            <input type="time" id="scheduleTime" />
-            <select id="scheduleCategory">
-              <option value="방송">방송</option>
-              <option value="방송예정">방송예정</option>
-              <option value="합방">합방</option>
-              <option value="힛차">힛차</option>
-              <option value="기타">기타</option>
-            </select>
-            <input type="text" id="scheduleText" placeholder="예: 합방 / 개인방송 / 힛차 공지" />
-            <button class="primary" onclick="saveScheduleFromForm()">저장</button>
-            <button class="secondary" onclick="clearScheduleInputs()">초기화</button>
-          </div>
-
-          <div class="event-actions">
-            <button onclick="deleteSelectedSchedule()" class="danger">선택 일정 삭제</button>
-          </div>
-
-          <div class="message" id="scheduleMessage">스케줄은 Firebase에 공유 저장됩니다.</div>
-        </div>
-      </div>
-    </div>
-
-    <div id="recordPage" class="page">
-      <div class="card">
-        <div class="top-bar">
-          <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-        </div>
-
-        <h2>전적 기록</h2>
-        <div class="desc">
-          날짜, 종류, 승패, 팀원/상대팀, 맞밸런스, 순수킬을 Firebase에 공유 저장합니다.
-        </div>
-
-        <div class="record-summary record-summary-5">
-          <div class="summary-box">
-            <span>총 경기 수</span>
-            <strong id="recordTotalGames">0</strong>
-          </div>
-
-          <div class="summary-box">
-            <span>승리 (킬내기 / 종합)</span>
-            <strong id="recordWinBreakdown">0 / 0</strong>
-          </div>
-
-          <div class="summary-box">
-            <span>패배 (킬내기 / 종합)</span>
-            <strong id="recordLossBreakdown">0 / 0</strong>
-          </div>
-
-          <div class="summary-box">
-            <span>킬내기 승률</span>
-            <strong id="recordKillWinRate">0.00%</strong>
-          </div>
-
-          <div class="summary-box">
-            <span>종합 승률</span>
-            <strong id="recordOverallWinRate">0.00%</strong>
-          </div>
-        </div>
-
-        <div class="record-form-grid">
-          <input type="date" id="recordDate" />
-
-          <select id="recordType">
-            <option value="킬내기">킬내기</option>
-            <option value="랜드">랜드</option>
-            <option value="공장">공장</option>
-            <option value="GKL">GKL</option>
-          </select>
-
-          <select id="recordResult">
-            <option value="승리">승리</option>
-            <option value="패배">패배</option>
-          </select>
-
-          <input type="text" id="recordBalance" placeholder="맞밸런스" />
-          <input type="number" id="recordPureKills" placeholder="순수킬 (음수 가능)" step="1" />
-        </div>
-
-        <h3 class="section-subtitle">우리 팀</h3>
-        <div class="record-team-grid">
-          <input type="text" id="myTeam1" placeholder="팀원 1" />
-          <input type="text" id="myTeam2" placeholder="팀원 2" />
-          <input type="text" id="myTeam3" placeholder="팀원 3" />
-          <input type="text" id="myTeam4" placeholder="팀원 4" />
-          <input type="text" id="myTeam5" placeholder="팀원 5" />
-          <input type="text" id="myTeam6" placeholder="팀원 6" />
-          <input type="text" id="myTeam7" placeholder="팀원 7" />
-          <input type="text" id="myTeam8" placeholder="팀원 8" />
-        </div>
-
-        <h3 class="section-subtitle">상대 팀</h3>
-        <div class="record-team-grid">
-          <input type="text" id="enemyTeam1" placeholder="상대팀 1" />
-          <input type="text" id="enemyTeam2" placeholder="상대팀 2" />
-          <input type="text" id="enemyTeam3" placeholder="상대팀 3" />
-          <input type="text" id="enemyTeam4" placeholder="상대팀 4" />
-          <input type="text" id="enemyTeam5" placeholder="상대팀 5" />
-          <input type="text" id="enemyTeam6" placeholder="상대팀 6" />
-          <input type="text" id="enemyTeam7" placeholder="상대팀 7" />
-          <input type="text" id="enemyTeam8" placeholder="상대팀 8" />
-        </div>
-
-        <div class="message record-help">
-          팀원과 상대팀은 각각 4명 이상, 8명 이하로 자유롭게 입력할 수 있습니다.
-        </div>
-
-        <div class="btn-row">
-          <button class="primary" onclick="saveRecord()">저장</button>
-          <button class="secondary" onclick="clearRecordInputs()">초기화</button>
-          <button class="danger" onclick="deleteSelectedRecord()">선택 전적 삭제</button>
-        </div>
-
-        <div class="message" id="recordMessage">전적 정보를 입력하고 저장 버튼을 눌러주세요.</div>
-        <div id="recordList" class="record-list"></div>
-      </div>
-    </div>
-
-    <div id="detailPage" class="page">
-      <div class="card">
-        <div class="top-bar">
-          <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-          <button class="primary" onclick="renderDetailPage()">새로고침</button>
-        </div>
-
-        <h2>전적 상세</h2>
-        <div class="desc">
-          저장된 전적을 기준으로 밸런스별 승률, 이번 달 승률, 펀킬및 다파전 승률, 야스오 추적기를 보여줍니다.
-        </div>
-
-        <div class="detail-grid">
-          <div class="detail-card">
-            <h3 class="detail-title">밸런스별 승률</h3>
-            <div id="detailBalanceTable"></div>
-          </div>
-
-          <div class="detail-card">
-            <h3 class="detail-title">이번 달 승률</h3>
-            <div id="detailMonthTable"></div>
-          </div>
-
-          <div class="detail-card full-span">
-            <h3 class="detail-title">펀킬 및 다파전 승률</h3>
-            <div id="detailMapTable"></div>
-          </div>
-        </div>
-
-        <div class="detail-card relation-search-card">
-          <h3 class="detail-title">야스오 추적기</h3>
-          <div class="desc detail-desc">
-            비교할 멤버 이름 1명을 입력하면, 수힛 기준으로 같은 팀일 때 / 적팀일 때 승률을 보여줍니다.
-          </div>
-
-          <div class="relation-search-row">
-            <input type="text" id="memberRelationInput" placeholder="예: 수힛" />
-            <button class="primary" onclick="renderMemberRelationStats()">검색</button>
-            <button class="secondary" onclick="clearMemberRelationStats()">초기화</button>
-          </div>
-
-          <div id="memberRelationSummary" class="message relation-message">
-            비교할 멤버 이름을 입력해 주세요. (수힛 기준)
-          </div>
-
-          <div class="detail-card inner-detail-card">
-            <h3 class="detail-title small">수힛 기준 관계 승률</h3>
-            <div id="memberRelationTable"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div id="appleGamePage" class="page">
-    <div class="card game-page-card">
-      <div class="top-bar">
-        <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-        <button class="secondary" onclick="showAppleLobby()">로비</button>
-        <button class="primary" onclick="startAppleGame()">재시작</button>
-      </div>
-
-      <h2>사과게임</h2>
-
-      <div id="appleLobby" class="apple-lobby active">
-        <button class="apple-start-btn" onclick="startAppleGame()">Play</button>
-      </div>
-
-      <div id="appleGameWrap" class="apple-game-wrap hidden">
-        <div id="appleBoard" class="apple-board"></div>
-
-        <div class="apple-side-panel">
-          <div id="appleMiniScore">0</div>
-
-          <div class="apple-time-bar-wrap">
-            <div id="appleTimeBar" class="apple-time-bar"></div>
-          </div>
-        </div>
-
-        <div id="appleGameOverlay" class="apple-overlay hidden">
-          <div class="apple-overlay-card">
-            <div id="appleFinalScore">0</div>
-            <button class="primary" onclick="startAppleGame()">재시작</button>
-            <button class="secondary" onclick="showAppleLobby()">로비로 나가기</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- AIM PAGE -->
-  <div id="aimPracticePage" class="page">
-    <div class="card game-page-card">
-      <div class="top-bar">
-        <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-        <button class="primary" onclick="startAimPractice()">시작</button>
-      </div>
-
-      <h2>에임연습</h2>
-
-      <div id="aimArena" class="aim-arena">
-        <div id="aimTarget" class="aim-target hidden"></div>
-
-        <div id="aimStartOverlay" class="aim-start-overlay">
-          <button class="primary" onclick="startAimPractice()">Play</button>
-        </div>
-
-        <div id="aimEndOverlay" class="aim-end-overlay hidden">
-          <button class="primary" onclick="startAimPractice()">다시하기</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-  <script type="module" src="script.js"></script>
-</body>
-</html>
+/* =========================
+   APPLE GAME FULL
+========================= */
+
+const APPLE_COLS = 17;
+const APPLE_ROWS = 10;
+const APPLE_TOTAL = APPLE_COLS * APPLE_ROWS;
+const APPLE_LIMIT = 100;
+
+let appleBoard = [];
+let appleSelectedIndexes = [];
+let appleDragging = false;
+let applePointerStarted = false;
+let appleScore = 0;
+let appleTimeLeft = APPLE_LIMIT;
+let appleTimer = null;
+let appleRunning = false;
+
+window.showAppleLobby = showAppleLobby;
+window.startAppleGame = startAppleGame;
+
+function showAppleLobby() {
+  showPage("appleGamePage");
+
+  document.getElementById("appleLobby").classList.remove("hidden");
+  document.getElementById("appleGameWrap").classList.add("hidden");
+  document.getElementById("appleGameOverlay").classList.add("hidden");
+
+  stopAppleTimer();
+}
+
+function startAppleGame() {
+  document.getElementById("appleLobby").classList.add("hidden");
+  document.getElementById("appleGameWrap").classList.remove("hidden");
+  document.getElementById("appleGameOverlay").classList.add("hidden");
+
+  appleBoard = Array.from({ length: APPLE_TOTAL }, () => ({
+    value: Math.floor(Math.random() * 9) + 1,
+    removed: false
+  }));
+
+  appleSelectedIndexes = [];
+  appleScore = 0;
+  appleTimeLeft = APPLE_LIMIT;
+  appleRunning = true;
+
+  renderAppleBoard();
+  startAppleTimer();
+}
+
+function renderAppleBoard() {
+  const boardEl = document.getElementById("appleBoard");
+  if (!boardEl) return;
+
+  boardEl.innerHTML = "";
+
+  appleBoard.forEach((cell, index) => {
+    const button = document.createElement("button");
+    button.className = "apple-cell";
+    button.type = "button";
+
+    if (cell.removed) {
+      button.classList.add("removed");
+      button.disabled = true;
+      button.textContent = "";
+    } else {
+      button.textContent = cell.value;
+
+      if (appleSelectedIndexes.includes(index)) {
+        button.classList.add("selected");
+      }
+
+      button.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        handleApplePointerDown(index);
+      });
+
+      button.addEventListener("pointerenter", () => {
+        handleApplePointerEnter(index);
+      });
+    }
+
+    boardEl.appendChild(button);
+  });
+
+  boardEl.onpointerup = () => handleApplePointerUp();
+
+  updateAppleHud();
+}
+
+function handleApplePointerDown(index) {
+  if (!appleRunning) return;
+
+  const cell = appleBoard[index];
+  if (!cell || cell.removed) return;
+
+  clearAppleSelection(false);
+  appleDragging = true;
+  applePointerStarted = true;
+
+  trySelectAppleCell(index);
+}
+
+function handleApplePointerEnter(index) {
+  if (!appleDragging) return;
+  trySelectAppleCell(index);
+}
+
+function handleApplePointerUp() {
+  appleDragging = false;
+  applePointerStarted = false;
+}
+
+function trySelectAppleCell(index) {
+  const cell = appleBoard[index];
+  if (!cell || cell.removed) return;
+
+  if (appleSelectedIndexes.includes(index)) return;
+
+  if (appleSelectedIndexes.length > 0) {
+    const last = appleSelectedIndexes[appleSelectedIndexes.length - 1];
+    if (!isOrthogonallyAdjacent(last, index)) return;
+  }
+
+  appleSelectedIndexes.push(index);
+
+  const total = appleSelectedIndexes.reduce(
+    (sum, i) => sum + appleBoard[i].value,
+    0
+  );
+
+  if (total > 10) {
+    clearAppleSelection();
+    return;
+  }
+
+  if (total === 10) {
+    appleSelectedIndexes.forEach((i) => {
+      appleBoard[i].removed = true;
+      appleScore++;
+    });
+
+    clearAppleSelection(false);
+    renderAppleBoard();
+    return;
+  }
+
+  renderAppleBoard();
+}
+
+function clearAppleSelection(render = true) {
+  appleSelectedIndexes = [];
+  if (render) renderAppleBoard();
+}
+
+function isOrthogonallyAdjacent(a, b) {
+  const ar = Math.floor(a / APPLE_COLS);
+  const ac = a % APPLE_COLS;
+
+  const br = Math.floor(b / APPLE_COLS);
+  const bc = b % APPLE_COLS;
+
+  return (
+    (Math.abs(ar - br) === 1 && ac === bc) ||
+    (Math.abs(ac - bc) === 1 && ar === br)
+  );
+}
+
+function updateAppleHud() {
+  const scoreEl = document.getElementById("appleMiniScoreValue");
+  const timeEl = document.getElementById("appleTimeText");
+  const barEl = document.getElementById("appleTimeBar");
+
+  if (scoreEl) scoreEl.textContent = appleScore;
+  if (timeEl) timeEl.textContent = appleTimeLeft;
+
+  if (barEl) {
+    const percent = (appleTimeLeft / APPLE_LIMIT) * 100;
+    barEl.style.height = `${percent}%`;
+  }
+}
+
+function startAppleTimer() {
+  stopAppleTimer();
+
+  appleTimer = setInterval(() => {
+    appleTimeLeft--;
+
+    if (appleTimeLeft <= 0) {
+      appleTimeLeft = 0;
+      finishAppleGame();
+    }
+
+    updateAppleHud();
+  }, 1000);
+}
+
+function stopAppleTimer() {
+  if (appleTimer) {
+    clearInterval(appleTimer);
+    appleTimer = null;
+  }
+}
+
+function finishAppleGame() {
+  stopAppleTimer();
+  appleRunning = false;
+
+  document.getElementById("appleFinalScore").textContent = appleScore;
+  document.getElementById("appleGameOverlay").classList.remove("hidden");
+}
+
+function resetAppleGame() {
+  startAppleGame();
+}
+
+document.addEventListener("pointerup", () => {
+  appleDragging = false;
+});
