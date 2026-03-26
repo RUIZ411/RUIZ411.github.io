@@ -1052,13 +1052,21 @@ body.dark .stats-table th {
   position: relative;
 }
 
-/* apple game */
+/* =========================
+   APPLE GAME
+========================= */
+
+.apple-lobby {
+  display: none;
+}
+
 .apple-lobby.active {
   display: block;
 }
 
 .apple-lobby.hidden,
-.apple-game-wrap.hidden {
+.apple-game-wrap.hidden,
+.apple-overlay.hidden {
   display: none;
 }
 
@@ -1110,6 +1118,7 @@ body.dark .stats-table th {
   font-weight: 300;
   box-shadow: inset -8px -8px 20px rgba(0,0,0,0.08), 0 18px 30px rgba(0,0,0,0.18);
   position: relative;
+  cursor: pointer;
 }
 
 .apple-start-btn::before {
@@ -1168,15 +1177,16 @@ body.dark .stats-table th {
 }
 
 .apple-game-wrap {
-  display: block;
+  display: flex;
+  justify-content: center;
 }
 
 .apple-board-shell {
   position: relative;
   background: linear-gradient(180deg, #16c56b, #08bf60);
   border-radius: 28px;
-  padding: 18px;
-  min-height: 640px;
+  padding: 16px;
+  width: min(100%, 1180px);
   box-shadow: inset 0 8px 24px rgba(255,255,255,0.12);
 }
 
@@ -1186,17 +1196,20 @@ body.dark .stats-table th {
     linear-gradient(45deg, rgba(186, 230, 163, 0.28) 25%, transparent 25%, transparent 50%, rgba(186, 230, 163, 0.28) 50%, rgba(186, 230, 163, 0.28) 75%, transparent 75%, transparent),
     linear-gradient(45deg, rgba(255,255,255,0.28) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.28) 50%, rgba(255,255,255,0.28) 75%, transparent 75%, transparent),
     linear-gradient(180deg, #eaf9dd, #d5f1c6);
-  background-size: 20px 20px, 20px 20px, auto;
+  background-size: 18px 18px, 18px 18px, auto;
   border-radius: 18px;
-  padding: 18px 18px 54px;
+  padding: 16px 54px 52px 16px;
   border: 4px solid rgba(255,255,255,0.22);
+  overflow: hidden;
 }
 
 .apple-board {
   display: grid;
   grid-template-columns: repeat(17, 1fr);
-  gap: 8px;
-  min-height: 500px;
+  gap: 6px;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
 }
 
 .apple-cell {
@@ -1205,31 +1218,34 @@ body.dark .stats-table th {
   border-radius: 50%;
   background: radial-gradient(circle at 30% 28%, #ff9c87, #ff4318 60%, #eb3b15 100%);
   color: white;
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 900;
   cursor: pointer;
   position: relative;
   box-shadow: inset -4px -4px 10px rgba(0,0,0,0.08);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 
 .apple-cell::before {
   content: "";
   position: absolute;
-  width: 4px;
-  height: 12px;
+  width: 3px;
+  height: 10px;
   border-radius: 4px;
   background: #7c3f00;
-  top: -5px;
-  left: calc(50% - 2px);
+  top: -4px;
+  left: calc(50% - 1.5px);
 }
 
 .apple-cell.selected {
-  outline: 4px solid #ffd400;
-  transform: scale(1.06);
+  outline: 3px solid #ffd400;
+  transform: scale(1.04);
 }
 
 .apple-cell.removed {
-  background: rgba(255,255,255,0.18);
+  background: rgba(55, 65, 81, 0.75);
   color: transparent;
   cursor: default;
   box-shadow: none;
@@ -1254,7 +1270,7 @@ body.dark .stats-table th {
 
 .apple-bottom-status {
   position: absolute;
-  right: 14px;
+  right: 54px;
   bottom: 12px;
   display: flex;
   gap: 16px;
@@ -1265,8 +1281,8 @@ body.dark .stats-table th {
 
 .apple-side-panel {
   position: absolute;
-  top: 18px;
-  right: 16px;
+  top: 14px;
+  right: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1275,7 +1291,7 @@ body.dark .stats-table th {
 }
 
 .apple-mini-score {
-  min-width: 70px;
+  min-width: 42px;
   text-align: center;
   color: #15803d;
   text-shadow: 0 1px 0 rgba(255,255,255,0.65);
@@ -1289,7 +1305,7 @@ body.dark .stats-table th {
 
 .apple-mini-score strong {
   display: block;
-  font-size: 34px;
+  font-size: 28px;
   line-height: 1;
   font-weight: 900;
 }
@@ -1299,7 +1315,6 @@ body.dark .stats-table th {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  width: 24px;
 }
 
 .apple-time-text {
@@ -1310,7 +1325,7 @@ body.dark .stats-table th {
 
 .apple-time-bar-wrap {
   width: 14px;
-  height: 300px;
+  height: 240px;
   border-radius: 999px;
   background: rgba(255,255,255,0.42);
   border: 2px solid rgba(34,197,94,0.45);
@@ -1336,14 +1351,10 @@ body.dark .stats-table th {
   z-index: 20;
 }
 
-.apple-overlay.hidden {
-  display: none;
-}
-
 .apple-overlay-card {
   width: min(420px, calc(100% - 28px));
   border-radius: 22px;
-  background: rgba(255,255,255,0.92);
+  background: rgba(255,255,255,0.94);
   padding: 26px 22px;
   text-align: center;
   box-shadow: 0 24px 48px rgba(0,0,0,0.22);
@@ -1408,6 +1419,125 @@ body.dark .stats-table th {
   justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+/* responsive */
+@media (max-width: 1100px) {
+  .apple-board-shell {
+    width: 100%;
+  }
+
+  .apple-board {
+    gap: 5px;
+  }
+
+  .apple-cell {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 900px) {
+  .apple-lobby-content {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .apple-board-panel {
+    padding: 14px 46px 52px 14px;
+  }
+
+  .apple-board {
+    gap: 4px;
+  }
+
+  .apple-cell {
+    font-size: 14px;
+  }
+
+  .apple-time-bar-wrap {
+    height: 200px;
+  }
+
+  .apple-bottom-status {
+    right: 46px;
+    gap: 10px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 760px) {
+  .apple-lobby-inner {
+    padding: 18px;
+    min-height: 480px;
+  }
+
+  .apple-lobby-title {
+    font-size: 38px;
+  }
+
+  .apple-start-btn {
+    width: 140px;
+    height: 140px;
+    font-size: 42px;
+  }
+
+  .apple-start-btn::before {
+    left: 66px;
+    height: 36px;
+  }
+
+  .apple-start-btn::after {
+    left: 78px;
+  }
+
+  .apple-board-panel {
+    padding: 10px 38px 50px 10px;
+  }
+
+  .apple-board {
+    gap: 3px;
+  }
+
+  .apple-cell {
+    font-size: 12px;
+  }
+
+  .apple-side-panel {
+    right: 8px;
+    top: 8px;
+  }
+
+  .apple-time-bar-wrap {
+    height: 160px;
+    width: 12px;
+  }
+
+  .apple-mini-score strong {
+    font-size: 22px;
+  }
+
+  .apple-time-text {
+    font-size: 14px;
+  }
+
+  .apple-bottom-status {
+    right: 36px;
+    bottom: 10px;
+    font-size: 11px;
+  }
+
+  .apple-score-fruit {
+    width: 150px;
+    height: 150px;
+  }
+
+  .apple-score-fruit strong {
+    font-size: 52px;
+  }
+
+  .apple-score-title {
+    font-size: 24px;
+  }
 }
 
 /* aim trainer */
