@@ -181,7 +181,14 @@ function resetHeroImage() {
 
 function showPage(pageId) {
   document.querySelectorAll(".page").forEach((page) => page.classList.remove("active"));
-  document.getElementById(pageId).classList.add("active");
+
+  const targetPage = document.getElementById(pageId);
+  if (!targetPage) {
+    console.error(`페이지를 찾을 수 없음: ${pageId}`);
+    return;
+  }
+
+  targetPage.classList.add("active");
 
   if (pageId === "schedulePage") {
     renderCalendar();
@@ -191,21 +198,12 @@ function showPage(pageId) {
     renderDetailPage();
   }
 
-  if (pageId === "appleGamePage") {
+  if (pageId === "appleGamePage" && typeof showAppleLobby === "function") {
     showAppleLobby();
   }
 
-  if (pageId === "aimPracticePage") {
+  if (pageId === "aimPracticePage" && typeof showAimStartOverlay === "function") {
     showAimStartOverlay();
-  }
-}
-
-  if (pageId === "schedulePage") {
-    renderCalendar();
-  }
-
-  if (pageId === "detailPage") {
-    renderDetailPage();
   }
 }
 
