@@ -70,6 +70,9 @@ window.saveRecord = saveRecord;
 window.clearRecordInputs = clearRecordInputs;
 window.selectRecord = selectRecord;
 window.deleteSelectedRecord = deleteSelectedRecord;
+window.showAppleLobby = showAppleLobby;
+window.startAppleGame = startAppleGame;
+window.startAimPractice = startAimPractice;
 
 window.renderDetailPage = renderDetailPage;
 window.renderMemberRelationStats = renderMemberRelationStats;
@@ -179,6 +182,23 @@ function resetHeroImage() {
 function showPage(pageId) {
   document.querySelectorAll(".page").forEach((page) => page.classList.remove("active"));
   document.getElementById(pageId).classList.add("active");
+
+  if (pageId === "schedulePage") {
+    renderCalendar();
+  }
+
+  if (pageId === "detailPage" && typeof renderDetailPage === "function") {
+    renderDetailPage();
+  }
+
+  if (pageId === "appleGamePage") {
+    showAppleLobby();
+  }
+
+  if (pageId === "aimPracticePage") {
+    showAimStartOverlay();
+  }
+}
 
   if (pageId === "schedulePage") {
     renderCalendar();
@@ -1137,7 +1157,374 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+/* =========================
+   APPLE GAME
+========================= */
+const APPLE_COLS = 17;
+const APPLE_ROWS = 10;
+const APPLE_TOTAL_CELLS = APPLE_COLS * APPLE_ROWS;
+const APPLE_LIMIT_SECONDS = 100;
 
+let appleBoard = [];
+let appleSelectedIndexes = [];
+let appleScore = 0;
+let appleTimeLeft = APPLE_LIMIT_SECONDS;
+let appleTimer = null;
+let appleRunning = false;
+
+function makeRandomAppleCell(index) {
+  return {
+    id: `apple-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
+    value: Math.floor(Math.random() * 9) + 1,
+    removed: false
+  };
+}
+
+function createAppleBoard() {
+  appleBoard = Array.from({ length: APPLE_TOTAL_CELLS }, (_, index) => makeRandomAppleCell(index));
+  appleSelectedIndexes = [];
+  appleScore = 0;
+  appleTimeLeft = APPLE_LIMIT_SECONDS;
+  appleRunning = false;
+}
+
+function showAppleLobby() {
+  stopAppleTimer();
+  appleRunning = false;
+
+  const lobby = document.getElementById("appleLobby");
+  const wrap = document.getElementById("appleGameWrap");
+  const overlay = document.getElementById("appleGameOverlay");
+
+  if (lobby) lobby.classList.remove("hidden");
+  if (lobby) lobby.classList.add("active");
+  if (wrap) wrap.classList.add("hidden");
+  if (overlay) overlay.classList.add("hidden");
+}
+
+function startAppleGame() {
+  createAppleBoard();
+  appleRunning = true;
+
+  const lobby = document.getElementById("appleLobby");
+  const wrap = document.getElementById("appleGameWrap");
+  const overlay = document.getElementById("appleGameOverlay");
+
+  if (lobby) {
+    lobby.classList.remove("active");
+    lobby.classList.add("hidden");
+  }
+  if (wrap) wrap.classList.remove("hidden");
+  if (overlay) overlay.classList.add("hidden");
+
+  renderAppleBoard();
+  updateAppleHud();
+  startAppleTimer();
+}
+
+function startAppleTimer() {
+  stopAppleTimer();
+
+  appleTimer = setInterval(() => {
+    appleTimeLeft -= 1;
+    updateAppleHud();
+
+    if (appleTimeLeft <= 0) {
+      finishAppleGame();
+    }
+  }, 1000);
+}
+
+function stopAppleTimer() {
+  if (appleTimer) {
+    clearInterval(appleTimer);
+    appleTimer = null;
+  }
+}
+
+function finishAppleGame() {
+  stopAppleTimer();
+  appleRunning = false;
+  appleSelectedIndexes = [];
+  renderAppleBoard();
+
+  document.getElementById("appleFinalScore").textContent = String(appleScore);
+  document.getElementById("appleGameOverlay").classList.remove("hidden");
+}
+
+function updateAppleHud() {
+  const miniScore = document.getElementById("appleMiniScore");
+  const timeText = document.getElementById("appleTimeText");
+  const timeBar = document.getElementById("appleTimeBar");
+  const currentSum = document.getElementById("appleCurrentSum");
+  const currentCount = document.getElementById("appleCurrentCount");
+
+  if (miniScore) miniScore.textContent = String(appleScore);
+  if (timeText) timeText.textContent = String(Math.max(0, appleTimeLeft));
+
+  const rate = Math.max(0, appleTimeLeft) / APPLE_LIMIT_SECONDS;
+  if (timeBar) timeBar.style.height = `${Math.max(0, rate * 100)}%`;
+
+  const selectedSum = appleSelectedIndexes.reduce((sum, index) => {
+    const cell = appleBoard[index];
+    return sum + (cell && !cell.removed ? cell.value : 0);
+  }, 0);
+
+  if (currentSum) currentSum.textContent = String(selectedSum);
+  if (currentCount) currentCount.textContent = String(appleSelectedIndexes.length);
+}
+
+function renderAppleBoard() {
+  const boardEl = document.getElementById("appleBoard");
+  if (!boardEl) return;
+
+  boardEl.innerHTML = "";
+
+  appleBoard.forEach((cell, index) => {
+    const button = document.createElement("button");
+    button.className = "apple-cell";
+    button.type = "button";
+
+    if (cell.removed) {
+      button.classList.add("removed");
+      button.disabled = true;
+      button.textContent = "";
+    } else {
+      button.textContent = String(cell.value);
+      if (appleSelectedIndexes.includes(index)) {
+        button.classList.add("selected");
+      }
+      button.addEventListener("click", () => handleAppleCellClick(index));
+    }
+
+    boardEl.appendChild(button);
+  });
+
+  updateAppleHud();
+}
+
+function getAppleRowCol(index) {
+  return {
+    row: Math.floor(index / APPLE_COLS),
+    col: index % APPLE_COLS
+  };
+}
+
+function isOrthogonallyAdjacent(indexA, indexB) {
+  const a = getAppleRowCol(indexA);
+  const b = getAppleRowCol(indexB);
+  const rowDiff = Math.abs(a.row - b.row);
+  const colDiff = Math.abs(a.col - b.col);
+  return rowDiff + colDiff === 1;
+}
+
+function clearAppleSelection() {
+  appleSelectedIndexes = [];
+  renderAppleBoard();
+}
+
+function handleAppleCellClick(index) {
+  if (!appleRunning) return;
+
+  const cell = appleBoard[index];
+  if (!cell || cell.removed) return;
+
+  if (appleSelectedIndexes.includes(index)) {
+    const lastIndex = appleSelectedIndexes[appleSelectedIndexes.length - 1];
+    if (lastIndex === index) {
+      appleSelectedIndexes.pop();
+      renderAppleBoard();
+    }
+    return;
+  }
+
+  if (appleSelectedIndexes.length > 0) {
+    const lastIndex = appleSelectedIndexes[appleSelectedIndexes.length - 1];
+    if (!isOrthogonallyAdjacent(lastIndex, index)) {
+      return;
+    }
+  }
+
+  appleSelectedIndexes.push(index);
+
+  const sum = appleSelectedIndexes.reduce((acc, selectedIndex) => acc + appleBoard[selectedIndex].value, 0);
+
+  if (sum > 10) {
+    appleSelectedIndexes = [];
+    renderAppleBoard();
+    return;
+  }
+
+  if (sum === 10) {
+    appleSelectedIndexes.forEach((selectedIndex) => {
+      appleBoard[selectedIndex].removed = true;
+      appleScore += 1;
+    });
+    appleSelectedIndexes = [];
+    renderAppleBoard();
+    return;
+  }
+
+  renderAppleBoard();
+}
+
+/* =========================
+   AIM PRACTICE
+========================= */
+const AIM_LIMIT_SECONDS = 30;
+let aimRunning = false;
+let aimTimeLeft = AIM_LIMIT_SECONDS;
+let aimHits = 0;
+let aimShots = 0;
+let aimSpawnTime = 0;
+let aimReactionTimes = [];
+let aimTimer = null;
+let aimMoveTimer = null;
+
+function showAimStartOverlay() {
+  stopAimPractice();
+
+  document.getElementById("aimStartOverlay").classList.remove("hidden");
+  document.getElementById("aimEndOverlay").classList.add("hidden");
+  document.getElementById("aimTarget").classList.add("hidden");
+
+  resetAimHud();
+}
+
+function resetAimHud() {
+  aimTimeLeft = AIM_LIMIT_SECONDS;
+  aimHits = 0;
+  aimShots = 0;
+  aimReactionTimes = [];
+
+  document.getElementById("aimTime").textContent = "30";
+  document.getElementById("aimHits").textContent = "0";
+  document.getElementById("aimShots").textContent = "0";
+  document.getElementById("aimAccuracy").textContent = "0%";
+  document.getElementById("aimAverage").textContent = "0ms";
+}
+
+function startAimPractice() {
+  stopAimPractice();
+  resetAimHud();
+
+  aimRunning = true;
+
+  document.getElementById("aimStartOverlay").classList.add("hidden");
+  document.getElementById("aimEndOverlay").classList.add("hidden");
+  document.getElementById("aimTarget").classList.remove("hidden");
+
+  spawnAimTarget();
+  bindAimArenaMiss();
+  startAimTimer();
+}
+
+function startAimTimer() {
+  aimTimer = setInterval(() => {
+    aimTimeLeft -= 1;
+    document.getElementById("aimTime").textContent = String(Math.max(0, aimTimeLeft));
+
+    if (aimTimeLeft <= 0) {
+      finishAimPractice();
+    }
+  }, 1000);
+}
+
+function stopAimPractice() {
+  aimRunning = false;
+
+  if (aimTimer) {
+    clearInterval(aimTimer);
+    aimTimer = null;
+  }
+
+  if (aimMoveTimer) {
+    clearInterval(aimMoveTimer);
+    aimMoveTimer = null;
+  }
+}
+
+function getAimAverageReaction() {
+  if (!aimReactionTimes.length) return 0;
+  const total = aimReactionTimes.reduce((sum, value) => sum + value, 0);
+  return Math.round(total / aimReactionTimes.length);
+}
+
+function updateAimHud() {
+  const accuracy = aimShots > 0 ? ((aimHits / aimShots) * 100).toFixed(1) : "0.0";
+  const average = getAimAverageReaction();
+
+  document.getElementById("aimHits").textContent = String(aimHits);
+  document.getElementById("aimShots").textContent = String(aimShots);
+  document.getElementById("aimAccuracy").textContent = `${accuracy}%`;
+  document.getElementById("aimAverage").textContent = `${average}ms`;
+}
+
+function spawnAimTarget() {
+  const arena = document.getElementById("aimArena");
+  const target = document.getElementById("aimTarget");
+  if (!arena || !target) return;
+
+  const rect = arena.getBoundingClientRect();
+  const targetSize = 86;
+
+  const left = Math.random() * (rect.width - targetSize);
+  const top = Math.random() * (rect.height - targetSize);
+
+  target.style.left = `${left}px`;
+  target.style.top = `${top}px`;
+
+  aimSpawnTime = performance.now();
+}
+
+function moveAimTarget() {
+  if (!aimRunning) return;
+  spawnAimTarget();
+}
+
+function bindAimArenaMiss() {
+  const arena = document.getElementById("aimArena");
+  const target = document.getElementById("aimTarget");
+
+  if (!arena.dataset.bound) {
+    arena.addEventListener("click", (event) => {
+      if (!aimRunning) return;
+      if (event.target === target) return;
+
+      aimShots += 1;
+      updateAimHud();
+    });
+
+    target.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!aimRunning) return;
+
+      aimShots += 1;
+      aimHits += 1;
+      aimReactionTimes.push(Math.round(performance.now() - aimSpawnTime));
+
+      updateAimHud();
+      spawnAimTarget();
+    });
+
+    arena.dataset.bound = "true";
+  }
+}
+
+function finishAimPractice() {
+  stopAimPractice();
+
+  document.getElementById("aimTarget").classList.add("hidden");
+  document.getElementById("aimEndOverlay").classList.remove("hidden");
+
+  const accuracy = aimShots > 0 ? ((aimHits / aimShots) * 100).toFixed(1) : "0.0";
+  const average = getAimAverageReaction();
+
+  document.getElementById("aimEndHits").textContent = String(aimHits);
+  document.getElementById("aimEndShots").textContent = String(aimShots);
+  document.getElementById("aimEndAccuracy").textContent = `${accuracy}%`;
+  document.getElementById("aimEndAverage").textContent = `${average}ms`;
+}
 applySavedTheme();
 updateAdminButton();
 loadHeroImage();
@@ -1146,3 +1533,6 @@ setDefaultRecordDate();
 startScheduleSync();
 startRecordSync();
 clearMemberRelationStats();
+createAppleBoard();
+showAimStartOverlay();
+
