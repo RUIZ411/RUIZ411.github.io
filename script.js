@@ -72,7 +72,9 @@ window.selectRecord = selectRecord;
 window.deleteSelectedRecord = deleteSelectedRecord;
 window.showAppleLobby = showAppleLobby;
 window.startAppleGame = startAppleGame;
+window.showAimStartOverlay = showAimStartOverlay;
 window.startAimPractice = startAimPractice;
+
 
 window.renderDetailPage = renderDetailPage;
 window.renderMemberRelationStats = renderMemberRelationStats;
