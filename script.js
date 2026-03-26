@@ -1533,6 +1533,4 @@ setDefaultRecordDate();
 startScheduleSync();
 startRecordSync();
 clearMemberRelationStats();
-createAppleBoard();
-showAimStartOverlay();
 
