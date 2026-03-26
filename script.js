@@ -178,7 +178,11 @@ function resetHeroImage() {
 
 function showPage(pageId) {
   document.querySelectorAll(".page").forEach((page) => page.classList.remove("active"));
-  document.getElementById(pageId).classList.add("active");
+
+  const targetPage = document.getElementById(pageId);
+  if (!targetPage) return;
+
+  targetPage.classList.add("active");
 
   if (pageId === "schedulePage") {
     renderCalendar();
@@ -427,6 +431,8 @@ function changeMonth(delta) {
 function renderCalendar() {
   const label = document.getElementById("calendarLabel");
   const daysContainer = document.getElementById("calendarDays");
+
+  if (!label || !daysContainer) return;
 
   label.textContent = `${calendarYear}년 ${calendarMonth + 1}월`;
   daysContainer.innerHTML = "";
@@ -926,9 +932,17 @@ function makeStatsTable(headers, rows) {
 }
 
 function renderBalanceStats() {
+  const killOnlyRecords = recordsCache.filter((item) => item.type === "킬내기");
+
+  if (!killOnlyRecords.length) {
+    document.getElementById("detailBalanceTable").innerHTML =
+      `<div class="empty-stats">킬내기 전적이 없습니다.</div>`;
+    return;
+  }
+
   const balanceGroups = {};
 
-  recordsCache.forEach((item) => {
+  killOnlyRecords.forEach((item) => {
     const key = (item.balance || "미입력").trim() || "미입력";
     if (!balanceGroups[key]) balanceGroups[key] = [];
     balanceGroups[key].push(item);
@@ -987,6 +1001,13 @@ function renderMapStats() {
 }
 
 function renderDetailPage() {
+  const balanceEl = document.getElementById("detailBalanceTable");
+  const monthEl = document.getElementById("detailMonthTable");
+  const mapEl = document.getElementById("detailMapTable");
+  const relationEl = document.getElementById("memberRelationTable");
+
+  if (!balanceEl || !monthEl || !mapEl || !relationEl) return;
+
   renderBalanceStats();
   renderMonthStats();
   renderMapStats();
@@ -995,8 +1016,7 @@ function renderDetailPage() {
   if (input && input.value.trim()) {
     renderMemberRelationStats();
   } else {
-    document.getElementById("memberRelationTable").innerHTML =
-      `<div class="empty-stats">비교할 멤버를 검색해 주세요.</div>`;
+    relationEl.innerHTML = `<div class="empty-stats">비교할 멤버를 검색해 주세요.</div>`;
   }
 }
 
