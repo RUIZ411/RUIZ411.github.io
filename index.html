@@ -9,53 +9,76 @@
 <body>
   <div class="app">
     <div id="homePage" class="page active">
-      <div class="card">
-        <div class="top-bar home-top-bar">
-          <button class="secondary" onclick="toggleDarkMode()" id="themeToggleBtn">다크모드</button>
-          <button class="secondary" onclick="toggleAdminLock()" id="adminToggleBtn">관리자 잠금 해제</button>
-        </div>
+  <div class="home-shell">
+    <div class="card home-main-card">
+      <div class="top-bar home-top-bar">
+        <button class="secondary" onclick="toggleDarkMode()" id="themeToggleBtn">다크모드</button>
+        <button class="secondary" onclick="toggleAdminLock()" id="adminToggleBtn">관리자 잠금 해제</button>
+      </div>
 
-        <div class="hero-badge">SUWEET TOOL</div>
+      <div class="hero-badge">SUWEET TOOL</div>
 
-        <div class="hero-image-wrap">
-          <img
-            id="heroImage"
-            class="hero-image"
-            alt="메인 이미지"
-            src="https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80"
-          />
-        </div>
+      <div class="hero-image-wrap">
+        <img
+          id="heroImage"
+          class="hero-image"
+          alt="메인 이미지"
+          src="https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80"
+        />
+      </div>
 
-        <div class="image-upload-row">
-          <label
-            class="mini-glass-btn"
-            for="heroImageInput"
-            onclick="return requireAdmin('이미지 변경')"
-          >이미지 추가</label>
-          <button class="mini-glass-btn" onclick="resetHeroImage()">이미지 초기화</button>
-          <input
-            id="heroImageInput"
-            class="hidden-file-input"
-            type="file"
-            accept="image/*"
-            onchange="handleHeroImageUpload(event)"
-          />
-        </div>
+      <div class="image-upload-row">
+        <label
+          class="mini-glass-btn"
+          for="heroImageInput"
+          onclick="return requireAdmin('이미지 변경')"
+        >이미지 추가</label>
+        <button class="mini-glass-btn" onclick="resetHeroImage()">이미지 초기화</button>
+        <input
+          id="heroImageInput"
+          class="hidden-file-input"
+          type="file"
+          accept="image/*"
+          onchange="handleHeroImageUpload(event)"
+        />
+      </div>
 
-        <h1>메인 페이지</h1>
-        <div class="desc">
-          원하는 메뉴를 눌러 해당 기능으로 이동하세요.<br />
-          팀 섞기, 스케줄, 전적 기록, 전적 상세를 한 번에 관리할 수 있습니다.
-        </div>
+      <h1>메인 페이지</h1>
+      <div class="desc">
+        원하는 메뉴를 눌러 해당 기능으로 이동하세요.<br />
+        팀 섞기, 스케줄, 전적 기록, 전적 상세를 한 번에 관리할 수 있습니다.
+      </div>
 
-        <div class="menu-grid">
-          <button class="menu-btn" onclick="showPage('teamPage')">팀 섞기</button>
-          <button class="menu-btn" onclick="showPage('schedulePage')">스케줄</button>
-          <button class="menu-btn" onclick="showPage('recordPage')">전적 기록</button>
-          <button class="menu-btn" onclick="showPage('detailPage')">전적 상세</button>
-        </div>
+      <div class="menu-grid">
+        <button class="menu-btn" onclick="showPage('teamPage')">팀 섞기</button>
+        <button class="menu-btn" onclick="showPage('schedulePage')">스케줄</button>
+        <button class="menu-btn" onclick="showPage('recordPage')">전적 기록</button>
+        <button class="menu-btn" onclick="showPage('detailPage')">전적 상세</button>
       </div>
     </div>
+
+    <aside class="home-side-games">
+      <div class="side-games-panel">
+        <div class="side-games-title">미니게임</div>
+        <button class="side-game-btn apple" onclick="showPage('appleGamePage')">
+          <span class="side-game-emoji">🍎</span>
+          <span class="side-game-text">
+            <strong>사과게임</strong>
+            <small>합 10 만들기</small>
+          </span>
+        </button>
+
+        <button class="side-game-btn aim" onclick="showPage('aimPracticePage')">
+          <span class="side-game-emoji">🎯</span>
+          <span class="side-game-text">
+            <strong>에임연습</strong>
+            <small>플릭 트레이너</small>
+          </span>
+        </button>
+      </div>
+    </aside>
+  </div>
+</div>
 
     <div id="teamPage" class="page">
       <div class="card">
