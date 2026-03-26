@@ -1158,120 +1158,53 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 /* =========================
-   APPLE GAME
+   APPLE GAME FULL
 ========================= */
+
 const APPLE_COLS = 17;
 const APPLE_ROWS = 10;
-const APPLE_TOTAL_CELLS = APPLE_COLS * APPLE_ROWS;
-const APPLE_LIMIT_SECONDS = 100;
+const APPLE_TOTAL = APPLE_COLS * APPLE_ROWS;
+const APPLE_LIMIT = 100;
 
 let appleBoard = [];
 let appleSelectedIndexes = [];
+let appleDragging = false;
+let applePointerStarted = false;
 let appleScore = 0;
-let appleTimeLeft = APPLE_LIMIT_SECONDS;
+let appleTimeLeft = APPLE_LIMIT;
 let appleTimer = null;
 let appleRunning = false;
 
-function makeRandomAppleCell(index) {
-  return {
-    id: `apple-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
-    value: Math.floor(Math.random() * 9) + 1,
-    removed: false
-  };
-}
-
-function createAppleBoard() {
-  appleBoard = Array.from({ length: APPLE_TOTAL_CELLS }, (_, index) => makeRandomAppleCell(index));
-  appleSelectedIndexes = [];
-  appleScore = 0;
-  appleTimeLeft = APPLE_LIMIT_SECONDS;
-  appleRunning = false;
-}
+window.showAppleLobby = showAppleLobby;
+window.startAppleGame = startAppleGame;
 
 function showAppleLobby() {
+  showPage("appleGamePage");
+
+  document.getElementById("appleLobby").classList.remove("hidden");
+  document.getElementById("appleGameWrap").classList.add("hidden");
+  document.getElementById("appleGameOverlay").classList.add("hidden");
+
   stopAppleTimer();
-  appleRunning = false;
-
-  const lobby = document.getElementById("appleLobby");
-  const wrap = document.getElementById("appleGameWrap");
-  const overlay = document.getElementById("appleGameOverlay");
-
-  if (lobby) lobby.classList.remove("hidden");
-  if (lobby) lobby.classList.add("active");
-  if (wrap) wrap.classList.add("hidden");
-  if (overlay) overlay.classList.add("hidden");
 }
 
 function startAppleGame() {
-  createAppleBoard();
+  document.getElementById("appleLobby").classList.add("hidden");
+  document.getElementById("appleGameWrap").classList.remove("hidden");
+  document.getElementById("appleGameOverlay").classList.add("hidden");
+
+  appleBoard = Array.from({ length: APPLE_TOTAL }, () => ({
+    value: Math.floor(Math.random() * 9) + 1,
+    removed: false
+  }));
+
+  appleSelectedIndexes = [];
+  appleScore = 0;
+  appleTimeLeft = APPLE_LIMIT;
   appleRunning = true;
 
-  const lobby = document.getElementById("appleLobby");
-  const wrap = document.getElementById("appleGameWrap");
-  const overlay = document.getElementById("appleGameOverlay");
-
-  if (lobby) {
-    lobby.classList.remove("active");
-    lobby.classList.add("hidden");
-  }
-  if (wrap) wrap.classList.remove("hidden");
-  if (overlay) overlay.classList.add("hidden");
-
   renderAppleBoard();
-  updateAppleHud();
   startAppleTimer();
-}
-
-function startAppleTimer() {
-  stopAppleTimer();
-
-  appleTimer = setInterval(() => {
-    appleTimeLeft -= 1;
-    updateAppleHud();
-
-    if (appleTimeLeft <= 0) {
-      finishAppleGame();
-    }
-  }, 1000);
-}
-
-function stopAppleTimer() {
-  if (appleTimer) {
-    clearInterval(appleTimer);
-    appleTimer = null;
-  }
-}
-
-function finishAppleGame() {
-  stopAppleTimer();
-  appleRunning = false;
-  appleSelectedIndexes = [];
-  renderAppleBoard();
-
-  document.getElementById("appleFinalScore").textContent = String(appleScore);
-  document.getElementById("appleGameOverlay").classList.remove("hidden");
-}
-
-function updateAppleHud() {
-  const miniScore = document.getElementById("appleMiniScore");
-  const timeText = document.getElementById("appleTimeText");
-  const timeBar = document.getElementById("appleTimeBar");
-  const currentSum = document.getElementById("appleCurrentSum");
-  const currentCount = document.getElementById("appleCurrentCount");
-
-  if (miniScore) miniScore.textContent = String(appleScore);
-  if (timeText) timeText.textContent = String(Math.max(0, appleTimeLeft));
-
-  const rate = Math.max(0, appleTimeLeft) / APPLE_LIMIT_SECONDS;
-  if (timeBar) timeBar.style.height = `${Math.max(0, rate * 100)}%`;
-
-  const selectedSum = appleSelectedIndexes.reduce((sum, index) => {
-    const cell = appleBoard[index];
-    return sum + (cell && !cell.removed ? cell.value : 0);
-  }, 0);
-
-  if (currentSum) currentSum.textContent = String(selectedSum);
-  if (currentCount) currentCount.textContent = String(appleSelectedIndexes.length);
 }
 
 function renderAppleBoard() {
@@ -1290,83 +1223,159 @@ function renderAppleBoard() {
       button.disabled = true;
       button.textContent = "";
     } else {
-      button.textContent = String(cell.value);
+      button.textContent = cell.value;
+
       if (appleSelectedIndexes.includes(index)) {
         button.classList.add("selected");
       }
-      button.addEventListener("click", () => handleAppleCellClick(index));
+
+      button.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        handleApplePointerDown(index);
+      });
+
+      button.addEventListener("pointerenter", () => {
+        handleApplePointerEnter(index);
+      });
     }
 
     boardEl.appendChild(button);
   });
 
+  boardEl.onpointerup = () => handleApplePointerUp();
+
   updateAppleHud();
 }
 
-function getAppleRowCol(index) {
-  return {
-    row: Math.floor(index / APPLE_COLS),
-    col: index % APPLE_COLS
-  };
-}
-
-function isOrthogonallyAdjacent(indexA, indexB) {
-  const a = getAppleRowCol(indexA);
-  const b = getAppleRowCol(indexB);
-  const rowDiff = Math.abs(a.row - b.row);
-  const colDiff = Math.abs(a.col - b.col);
-  return rowDiff + colDiff === 1;
-}
-
-function clearAppleSelection() {
-  appleSelectedIndexes = [];
-  renderAppleBoard();
-}
-
-function handleAppleCellClick(index) {
+function handleApplePointerDown(index) {
   if (!appleRunning) return;
 
   const cell = appleBoard[index];
   if (!cell || cell.removed) return;
 
-  if (appleSelectedIndexes.includes(index)) {
-    const lastIndex = appleSelectedIndexes[appleSelectedIndexes.length - 1];
-    if (lastIndex === index) {
-      appleSelectedIndexes.pop();
-      renderAppleBoard();
-    }
-    return;
-  }
+  clearAppleSelection(false);
+  appleDragging = true;
+  applePointerStarted = true;
+
+  trySelectAppleCell(index);
+}
+
+function handleApplePointerEnter(index) {
+  if (!appleDragging) return;
+  trySelectAppleCell(index);
+}
+
+function handleApplePointerUp() {
+  appleDragging = false;
+  applePointerStarted = false;
+}
+
+function trySelectAppleCell(index) {
+  const cell = appleBoard[index];
+  if (!cell || cell.removed) return;
+
+  if (appleSelectedIndexes.includes(index)) return;
 
   if (appleSelectedIndexes.length > 0) {
-    const lastIndex = appleSelectedIndexes[appleSelectedIndexes.length - 1];
-    if (!isOrthogonallyAdjacent(lastIndex, index)) {
-      return;
-    }
+    const last = appleSelectedIndexes[appleSelectedIndexes.length - 1];
+    if (!isOrthogonallyAdjacent(last, index)) return;
   }
 
   appleSelectedIndexes.push(index);
 
-  const sum = appleSelectedIndexes.reduce((acc, selectedIndex) => acc + appleBoard[selectedIndex].value, 0);
+  const total = appleSelectedIndexes.reduce(
+    (sum, i) => sum + appleBoard[i].value,
+    0
+  );
 
-  if (sum > 10) {
-    appleSelectedIndexes = [];
-    renderAppleBoard();
+  if (total > 10) {
+    clearAppleSelection();
     return;
   }
 
-  if (sum === 10) {
-    appleSelectedIndexes.forEach((selectedIndex) => {
-      appleBoard[selectedIndex].removed = true;
-      appleScore += 1;
+  if (total === 10) {
+    appleSelectedIndexes.forEach((i) => {
+      appleBoard[i].removed = true;
+      appleScore++;
     });
-    appleSelectedIndexes = [];
+
+    clearAppleSelection(false);
     renderAppleBoard();
     return;
   }
 
   renderAppleBoard();
 }
+
+function clearAppleSelection(render = true) {
+  appleSelectedIndexes = [];
+  if (render) renderAppleBoard();
+}
+
+function isOrthogonallyAdjacent(a, b) {
+  const ar = Math.floor(a / APPLE_COLS);
+  const ac = a % APPLE_COLS;
+
+  const br = Math.floor(b / APPLE_COLS);
+  const bc = b % APPLE_COLS;
+
+  return (
+    (Math.abs(ar - br) === 1 && ac === bc) ||
+    (Math.abs(ac - bc) === 1 && ar === br)
+  );
+}
+
+function updateAppleHud() {
+  const scoreEl = document.getElementById("appleMiniScoreValue");
+  const timeEl = document.getElementById("appleTimeText");
+  const barEl = document.getElementById("appleTimeBar");
+
+  if (scoreEl) scoreEl.textContent = appleScore;
+  if (timeEl) timeEl.textContent = appleTimeLeft;
+
+  if (barEl) {
+    const percent = (appleTimeLeft / APPLE_LIMIT) * 100;
+    barEl.style.height = `${percent}%`;
+  }
+}
+
+function startAppleTimer() {
+  stopAppleTimer();
+
+  appleTimer = setInterval(() => {
+    appleTimeLeft--;
+
+    if (appleTimeLeft <= 0) {
+      appleTimeLeft = 0;
+      finishAppleGame();
+    }
+
+    updateAppleHud();
+  }, 1000);
+}
+
+function stopAppleTimer() {
+  if (appleTimer) {
+    clearInterval(appleTimer);
+    appleTimer = null;
+  }
+}
+
+function finishAppleGame() {
+  stopAppleTimer();
+  appleRunning = false;
+
+  document.getElementById("appleFinalScore").textContent = appleScore;
+  document.getElementById("appleGameOverlay").classList.remove("hidden");
+}
+
+function resetAppleGame() {
+  startAppleGame();
+}
+
+document.addEventListener("pointerup", () => {
+  appleDragging = false;
+});
 
 /* =========================
    AIM PRACTICE
