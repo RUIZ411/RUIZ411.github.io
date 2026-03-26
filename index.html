@@ -54,6 +54,140 @@
         <button class="menu-btn" onclick="showPage('schedulePage')">스케줄</button>
         <button class="menu-btn" onclick="showPage('recordPage')">전적 기록</button>
         <button class="menu-btn" onclick="showPage('detailPage')">전적 상세</button>
+        <div id="appleGamePage" class="page">
+  <div class="card game-page-card">
+    <div class="top-bar">
+      <button class="secondary" onclick="showPage('homePage')">메인으로</button>
+      <button class="secondary" onclick="showAppleLobby()">로비</button>
+      <button class="primary" onclick="startAppleGame()">재시작</button>
+    </div>
+
+    <h2>사과게임</h2>
+    <div class="desc">
+      17 x 10 칸의 숫자를 상하좌우로 이어 선택해 합 10을 만드세요.<br />
+      100초가 끝났을 때 없앤 숫자 칸 수가 점수입니다.
+    </div>
+
+    <div id="appleLobby" class="apple-lobby active">
+      <div class="apple-lobby-inner">
+        <div class="apple-lobby-title">프룻 박스</div>
+        <div class="apple-lobby-sub">합 10을 만들어 100초 동안 최대한 많은 칸을 없애보세요.</div>
+
+        <div class="apple-lobby-content">
+          <button class="apple-start-btn" onclick="startAppleGame()">Play</button>
+
+          <div class="apple-lobby-sample">
+            <div class="sample-apple">5</div>
+            <div class="sample-apple">7</div>
+            <div class="sample-apple">6</div>
+            <div class="sample-apple">8</div>
+            <div class="sample-apple">3</div>
+            <div class="sample-apple">2</div>
+            <div class="sample-apple">9</div>
+            <div class="sample-apple">1</div>
+            <div class="sample-apple">4</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="appleGameWrap" class="apple-game-wrap hidden">
+      <div class="apple-board-shell">
+        <div class="apple-board-panel">
+          <div id="appleBoard" class="apple-board"></div>
+
+          <button class="apple-reset-btn" onclick="startAppleGame()">Reset</button>
+
+          <div class="apple-bottom-status">
+            <span>현재 합: <strong id="appleCurrentSum">0</strong></span>
+            <span>선택 칸: <strong id="appleCurrentCount">0</strong></span>
+          </div>
+        </div>
+
+        <div class="apple-side-panel">
+          <div class="apple-mini-score">
+            <span class="apple-mini-label">점수</span>
+            <strong id="appleMiniScore">0</strong>
+          </div>
+
+          <div class="apple-timer-card">
+            <div class="apple-time-text" id="appleTimeText">100</div>
+            <div class="apple-time-bar-wrap">
+              <div id="appleTimeBar" class="apple-time-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="appleGameOverlay" class="apple-overlay hidden">
+          <div class="apple-overlay-card">
+            <div class="apple-score-fruit">
+              <span class="apple-score-title">Score</span>
+              <strong id="appleFinalScore">0</strong>
+            </div>
+            <div class="apple-score-desc">없앤 숫자 개수 = 최종 점수</div>
+
+            <div class="apple-overlay-actions">
+              <button class="primary" onclick="startAppleGame()">재시작</button>
+              <button class="secondary" onclick="showAppleLobby()">로비로 나가기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="aimPracticePage" class="page">
+  <div class="card game-page-card">
+    <div class="top-bar">
+      <button class="secondary" onclick="showPage('homePage')">메인으로</button>
+      <button class="primary" onclick="startAimPractice()">시작</button>
+    </div>
+
+    <h2>에임연습</h2>
+    <div class="desc">
+      플릭 스타일 에임연습입니다. 랜덤 타겟을 빠르게 클릭해 기록을 올려보세요.
+    </div>
+
+    <div class="aim-wrap">
+      <div class="aim-topbar">
+        <div class="aim-stat">시간 <strong id="aimTime">30</strong>s</div>
+        <div class="aim-stat">명중 <strong id="aimHits">0</strong></div>
+        <div class="aim-stat">발사 <strong id="aimShots">0</strong></div>
+        <div class="aim-stat">명중률 <strong id="aimAccuracy">0%</strong></div>
+        <div class="aim-stat">평균 <strong id="aimAverage">0ms</strong></div>
+      </div>
+
+      <div id="aimArena" class="aim-arena">
+        <div id="aimCrosshair" class="aim-crosshair"></div>
+
+        <div id="aimStartOverlay" class="aim-start-overlay">
+          <div class="aim-start-card">
+            <h3>플릭 에임 트레이너</h3>
+            <p>30초 동안 랜덤 타겟을 최대한 빠르게 클릭하세요.</p>
+            <button class="primary" onclick="startAimPractice()">Play</button>
+          </div>
+        </div>
+
+        <div id="aimTarget" class="aim-target hidden"></div>
+
+        <div id="aimEndOverlay" class="aim-end-overlay hidden">
+          <div class="aim-end-card">
+            <h3>훈련 종료</h3>
+            <div class="aim-end-line">명중: <strong id="aimEndHits">0</strong></div>
+            <div class="aim-end-line">발사: <strong id="aimEndShots">0</strong></div>
+            <div class="aim-end-line">명중률: <strong id="aimEndAccuracy">0%</strong></div>
+            <div class="aim-end-line">평균 반응속도: <strong id="aimEndAverage">0ms</strong></div>
+            <div class="aim-end-actions">
+              <button class="primary" onclick="startAimPractice()">다시하기</button>
+              <button class="secondary" onclick="showPage('homePage')">메인으로</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
       </div>
     </div>
 
