@@ -926,9 +926,17 @@ function makeStatsTable(headers, rows) {
 }
 
 function renderBalanceStats() {
+  const killOnlyRecords = recordsCache.filter((item) => item.type === "킬내기");
+
+  if (!killOnlyRecords.length) {
+    document.getElementById("detailBalanceTable").innerHTML =
+      `<div class="empty-stats">킬내기 전적이 없습니다.</div>`;
+    return;
+  }
+
   const balanceGroups = {};
 
-  recordsCache.forEach((item) => {
+  killOnlyRecords.forEach((item) => {
     const key = (item.balance || "미입력").trim() || "미입력";
     if (!balanceGroups[key]) balanceGroups[key] = [];
     balanceGroups[key].push(item);
