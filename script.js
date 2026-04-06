@@ -27,11 +27,31 @@ const db = getFirestore(app);
 const schedulesCollection = collection(db, "schedules");
 const recordsCollection = collection(db, "killRecords");
 
-const PLAYER_COUNT = 10;
+const MIN_TEAM_PLAYERS = 10;
+const MAX_TEAM_PLAYERS = 12;
 const ADMIN_CODE = "suweet0305";
 const MIN_RECORD_TEAM_SIZE = 4;
 const MAX_RECORD_TEAM_SIZE = 8;
 const RELATION_BASE_MEMBER = "수힛";
+
+const MAP_POOL = [
+  "네팔",
+  "리장 타워",
+  "부산",
+  "오아시스",
+  "일리오스",
+  "66번국도",
+  "지브롤터",
+  "도라도",
+  "쓰레기촌",
+  "눔바니",
+  "아이헨발데",
+  "왕의 길",
+  "할리우드",
+  "아누비스",
+  "하나무라",
+  "볼스카야"
+];
 
 let calendarYear = new Date().getFullYear();
 let calendarMonth = new Date().getMonth();
@@ -54,9 +74,14 @@ window.toggleDarkMode = toggleDarkMode;
 window.toggleAdminLock = toggleAdminLock;
 window.handleHeroImageUpload = handleHeroImageUpload;
 window.resetHeroImage = resetHeroImage;
+
 window.shuffleTeams = shuffleTeams;
 window.copyTeams = copyTeams;
 window.resetPlayers = resetPlayers;
+window.drawMap = drawMap;
+window.copyMap = copyMap;
+window.resetMap = resetMap;
+
 window.openScheduleFormForToday = openScheduleFormForToday;
 window.changeMonth = changeMonth;
 window.selectCalendarDate = selectCalendarDate;
@@ -141,7 +166,8 @@ function toggleDarkMode() {
 function loadHeroImage() {
   const savedImage = localStorage.getItem("heroImage");
   if (savedImage) {
-    document.getElementById("heroImage").src = savedImage;
+    const heroImage = document.getElementById("heroImage");
+    if (heroImage) heroImage.src = savedImage;
   }
 }
 
@@ -157,7 +183,8 @@ function handleHeroImageUpload(event) {
   const reader = new FileReader();
   reader.onload = function (e) {
     const result = e.target.result;
-    document.getElementById("heroImage").src = result;
+    const heroImage = document.getElementById("heroImage");
+    if (heroImage) heroImage.src = result;
     localStorage.setItem("heroImage", result);
   };
   reader.readAsDataURL(file);
@@ -169,7 +196,8 @@ function resetHeroImage() {
   const defaultImage =
     "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80";
 
-  document.getElementById("heroImage").src = defaultImage;
+  const heroImage = document.getElementById("heroImage");
+  if (heroImage) heroImage.src = defaultImage;
   localStorage.removeItem("heroImage");
 
   const input = document.getElementById("heroImageInput");
@@ -193,6 +221,10 @@ function showPage(pageId) {
   }
 }
 
+/* =========================
+   팀 섞기 / 맵 추첨기
+========================= */
+
 function getInputs() {
   return [
     document.getElementById("player1"),
@@ -204,8 +236,10 @@ function getInputs() {
     document.getElementById("player7"),
     document.getElementById("player8"),
     document.getElementById("player9"),
-    document.getElementById("player10")
-  ];
+    document.getElementById("player10"),
+    document.getElementById("player11"),
+    document.getElementById("player12")
+  ].filter(Boolean);
 }
 
 function savePlayers() {
@@ -234,13 +268,33 @@ function resetPlayers() {
     input.value = "";
   });
 
-  document.getElementById("team1").innerHTML = "";
-  document.getElementById("team2").innerHTML = "";
-  document.getElementById("teamMessage").textContent = "멤버가 초기화되었습니다.";
+  const team1 = document.getElementById("team1");
+  const team2 = document.getElementById("team2");
+  const teamMessage = document.getElementById("teamMessage");
+
+  if (team1) team1.innerHTML = "";
+  if (team2) team2.innerHTML = "";
+  if (teamMessage) teamMessage.textContent = "멤버가 초기화되었습니다.";
 }
 
 function getPlayers() {
-  return getInputs().map((input) => input.value.trim());
+  return getInputs()
+    .map((input) => input.value.trim())
+    .filter((name) => name !== "");
+}
+
+function validatePlayers(players) {
+  if (players.length < MIN_TEAM_PLAYERS || players.length > MAX_TEAM_PLAYERS) {
+    alert(`플레이어는 최소 ${MIN_TEAM_PLAYERS}명, 최대 ${MAX_TEAM_PLAYERS}명까지 입력할 수 있습니다.`);
+    return false;
+  }
+
+  if (players.length % 2 !== 0) {
+    alert("팀을 정확히 반으로 나누기 위해서는 짝수 인원만 가능합니다. 10명 또는 12명으로 맞춰주세요.");
+    return false;
+  }
+
+  return true;
 }
 
 function makeTeams(players) {
@@ -265,6 +319,8 @@ function makeTeams(players) {
 
 function displayTeam(id, team) {
   const ul = document.getElementById(id);
+  if (!ul) return;
+
   ul.innerHTML = "";
 
   team.forEach((name) => {
@@ -275,10 +331,18 @@ function displayTeam(id, team) {
 }
 
 function countChangedLines(current, previous) {
-  if (!previous) return 5;
+  if (!previous) return current.team1.length;
+
+  const lineCount = Math.min(
+    current.team1.length,
+    current.team2.length,
+    previous.team1.length,
+    previous.team2.length
+  );
 
   let changed = 0;
-  for (let i = 0; i < 5; i++) {
+
+  for (let i = 0; i < lineCount; i++) {
     if (
       current.team1[i] !== previous.team1[i] ||
       current.team2[i] !== previous.team2[i]
@@ -290,15 +354,30 @@ function countChangedLines(current, previous) {
   return changed;
 }
 
+function isExactlySameLines(current, previous) {
+  if (!previous) return false;
+  if (!Array.isArray(previous.team1) || !Array.isArray(previous.team2)) return false;
+  if (current.team1.length !== previous.team1.length) return false;
+  if (current.team2.length !== previous.team2.length) return false;
+
+  for (let i = 0; i < current.team1.length; i++) {
+    if (
+      current.team1[i] !== previous.team1[i] ||
+      current.team2[i] !== previous.team2[i]
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function shuffleTeams() {
   if (!requireAdmin("팀 섞기")) return;
 
   const players = getPlayers();
 
-  if (players.length !== PLAYER_COUNT || players.some((name) => name === "")) {
-    alert("10명의 이름을 모두 입력해야 합니다.");
-    return;
-  }
+  if (!validatePlayers(players)) return;
 
   const previousResult = JSON.parse(localStorage.getItem("lastTeams") || "null");
   let result = null;
@@ -308,20 +387,40 @@ function shuffleTeams() {
     result = makeTeams(players);
     attempts++;
   } while (
-    previousResult &&
-    countChangedLines(result, previousResult) < 2 &&
-    attempts < 50
+    attempts < 300 &&
+    (
+      isExactlySameLines(result, previousResult) ||
+      (previousResult && countChangedLines(result, previousResult) < 2)
+    )
   );
+
+  if (
+    previousResult &&
+    (
+      isExactlySameLines(result, previousResult) ||
+      countChangedLines(result, previousResult) < 2
+    )
+  ) {
+    const teamMessage = document.getElementById("teamMessage");
+    if (teamMessage) {
+      teamMessage.textContent = "조건을 만족하는 새 팀 구성을 찾지 못했습니다. 한 번 더 섞어주세요.";
+    }
+    return;
+  }
 
   displayTeam("team1", result.team1);
   displayTeam("team2", result.team2);
+
   localStorage.setItem("lastTeams", JSON.stringify(result));
 
+  const teamMessage = document.getElementById("teamMessage");
+  if (!teamMessage) return;
+
   if (!previousResult) {
-    document.getElementById("teamMessage").textContent = "팀이 섞였습니다.";
+    teamMessage.textContent = `${players.length}명 기준으로 팀이 섞였습니다.`;
   } else {
-    document.getElementById("teamMessage").textContent =
-      `직전 결과와 ${countChangedLines(result, previousResult)}라인 다르게 섞었습니다.`;
+    teamMessage.textContent =
+      `직전 결과와 완전히 같은 줄 없이, ${countChangedLines(result, previousResult)}라인 다르게 섞었습니다.`;
   }
 }
 
@@ -335,20 +434,20 @@ function copyTeams() {
     li.textContent.trim()
   );
 
-  if (team1Items.length !== 5 || team2Items.length !== 5) {
+  if (team1Items.length === 0 || team2Items.length === 0 || team1Items.length !== team2Items.length) {
     alert("먼저 팀을 섞어주세요.");
     return;
   }
 
   let text = "블루\t레드\n";
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < team1Items.length; i++) {
     text += `${team1Items[i]}\t${team2Items[i]}\n`;
   }
 
   navigator.clipboard.writeText(text)
     .then(() => {
-      document.getElementById("teamMessage").textContent =
-        "블루 / 레드 형식으로 복사되었습니다.";
+      const teamMessage = document.getElementById("teamMessage");
+      if (teamMessage) teamMessage.textContent = "블루 / 레드 형식으로 복사되었습니다.";
     })
     .catch(() => {
       const textarea = document.createElement("textarea");
@@ -358,10 +457,79 @@ function copyTeams() {
       document.execCommand("copy");
       document.body.removeChild(textarea);
 
-      document.getElementById("teamMessage").textContent =
-        "블루 / 레드 형식으로 복사되었습니다.";
+      const teamMessage = document.getElementById("teamMessage");
+      if (teamMessage) teamMessage.textContent = "블루 / 레드 형식으로 복사되었습니다.";
     });
 }
+
+function drawMap() {
+  if (!requireAdmin("맵 추첨")) return;
+
+  const randomIndex = Math.floor(Math.random() * MAP_POOL.length);
+  const selectedMap = MAP_POOL[randomIndex];
+
+  localStorage.setItem("selectedMap", selectedMap);
+
+  const mapMessage = document.getElementById("mapMessage");
+  if (mapMessage) {
+    mapMessage.textContent = `추첨 맵: ${selectedMap}`;
+  }
+}
+
+function copyMap() {
+  if (!requireAdmin("맵 복사")) return;
+
+  const mapMessage = document.getElementById("mapMessage");
+  if (!mapMessage) {
+    alert("맵 출력 영역이 없습니다.");
+    return;
+  }
+
+  const text = mapMessage.textContent.replace("추첨 맵: ", "").replace(" (복사됨)", "").trim();
+
+  if (!text || text === "맵 추첨 버튼을 눌러주세요.") {
+    alert("먼저 맵을 추첨해주세요.");
+    return;
+  }
+
+  navigator.clipboard.writeText(text)
+    .then(() => {
+      mapMessage.textContent = `추첨 맵: ${text} (복사됨)`;
+    })
+    .catch(() => {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+
+      mapMessage.textContent = `추첨 맵: ${text} (복사됨)`;
+    });
+}
+
+function resetMap() {
+  if (!requireAdmin("맵 초기화")) return;
+
+  localStorage.removeItem("selectedMap");
+
+  const mapMessage = document.getElementById("mapMessage");
+  if (mapMessage) {
+    mapMessage.textContent = "맵 추첨 버튼을 눌러주세요.";
+  }
+}
+
+function loadSavedMap() {
+  const savedMap = localStorage.getItem("selectedMap");
+  const mapMessage = document.getElementById("mapMessage");
+  if (savedMap && mapMessage) {
+    mapMessage.textContent = `추첨 맵: ${savedMap}`;
+  }
+}
+
+/* =========================
+   스케줄
+========================= */
 
 function getSchedules() {
   return schedulesCache;
@@ -381,8 +549,10 @@ function startScheduleSync() {
     },
     (error) => {
       console.error(error);
-      document.getElementById("scheduleMessage").textContent =
-        "Firebase 연결 오류가 발생했습니다.";
+      const message = document.getElementById("scheduleMessage");
+      if (message) {
+        message.textContent = "Firebase 연결 오류가 발생했습니다.";
+      }
     }
   );
 }
@@ -399,7 +569,10 @@ function updateHitchaCount() {
       item.date.startsWith(`${targetYear}-${targetMonth}-`)
   ).length;
 
-  document.getElementById("hitchaCount").textContent = `이번달 힛차 ${count}회`;
+  const hitchaCount = document.getElementById("hitchaCount");
+  if (hitchaCount) {
+    hitchaCount.textContent = `이번달 힛차 ${count}회`;
+  }
 }
 
 function formatDateKey(year, month, day) {
@@ -522,10 +695,15 @@ function renderCalendar() {
 }
 
 function selectCalendarDate(dateKey) {
-  document.getElementById("scheduleDate").value = dateKey;
+  const scheduleDate = document.getElementById("scheduleDate");
+  const scheduleMessage = document.getElementById("scheduleMessage");
+
+  if (scheduleDate) scheduleDate.value = dateKey;
   selectedScheduleId = null;
-  document.getElementById("scheduleMessage").textContent =
-    `${dateKey} 날짜로 입력할 수 있습니다.`;
+
+  if (scheduleMessage) {
+    scheduleMessage.textContent = `${dateKey} 날짜로 입력할 수 있습니다.`;
+  }
 }
 
 function openScheduleFormForToday() {
@@ -533,30 +711,47 @@ function openScheduleFormForToday() {
 
   const today = new Date();
 
-  document.getElementById("scheduleDate").value =
-    formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
-  document.getElementById("scheduleTime").value = "";
-  document.getElementById("scheduleText").value = "";
-  document.getElementById("scheduleCategory").value = "방송";
+  const scheduleDate = document.getElementById("scheduleDate");
+  const scheduleTime = document.getElementById("scheduleTime");
+  const scheduleText = document.getElementById("scheduleText");
+  const scheduleCategory = document.getElementById("scheduleCategory");
+
+  if (scheduleDate) {
+    scheduleDate.value = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+  }
+  if (scheduleTime) scheduleTime.value = "";
+  if (scheduleText) scheduleText.value = "";
+  if (scheduleCategory) scheduleCategory.value = "방송";
+
   selectedScheduleId = null;
 }
 
 function clearScheduleInputs() {
-  document.getElementById("scheduleDate").value = "";
-  document.getElementById("scheduleTime").value = "";
-  document.getElementById("scheduleText").value = "";
-  document.getElementById("scheduleCategory").value = "방송";
+  const scheduleDate = document.getElementById("scheduleDate");
+  const scheduleTime = document.getElementById("scheduleTime");
+  const scheduleText = document.getElementById("scheduleText");
+  const scheduleCategory = document.getElementById("scheduleCategory");
+  const scheduleMessage = document.getElementById("scheduleMessage");
+
+  if (scheduleDate) scheduleDate.value = "";
+  if (scheduleTime) scheduleTime.value = "";
+  if (scheduleText) scheduleText.value = "";
+  if (scheduleCategory) scheduleCategory.value = "방송";
+
   selectedScheduleId = null;
-  document.getElementById("scheduleMessage").textContent = "입력값을 초기화했습니다.";
+
+  if (scheduleMessage) {
+    scheduleMessage.textContent = "입력값을 초기화했습니다.";
+  }
 }
 
 async function saveScheduleFromForm() {
   if (!requireAdmin("일정 저장")) return;
 
-  const date = document.getElementById("scheduleDate").value;
-  const time = document.getElementById("scheduleTime").value;
-  const text = document.getElementById("scheduleText").value.trim();
-  const category = document.getElementById("scheduleCategory").value;
+  const date = document.getElementById("scheduleDate")?.value || "";
+  const time = document.getElementById("scheduleTime")?.value || "";
+  const text = document.getElementById("scheduleText")?.value.trim() || "";
+  const category = document.getElementById("scheduleCategory")?.value || "방송";
 
   if (!date || !text) {
     alert("날짜와 내용을 입력해주세요.");
@@ -566,12 +761,14 @@ async function saveScheduleFromForm() {
   const payload = { date, time, text, category };
 
   try {
+    const scheduleMessage = document.getElementById("scheduleMessage");
+
     if (selectedScheduleId) {
       await updateDoc(doc(db, "schedules", selectedScheduleId), payload);
-      document.getElementById("scheduleMessage").textContent = "일정을 수정했습니다.";
+      if (scheduleMessage) scheduleMessage.textContent = "일정을 수정했습니다.";
     } else {
       await addDoc(schedulesCollection, payload);
-      document.getElementById("scheduleMessage").textContent = "일정을 추가했습니다.";
+      if (scheduleMessage) scheduleMessage.textContent = "일정을 추가했습니다.";
     }
 
     clearScheduleInputs();
@@ -588,12 +785,21 @@ function editScheduleById(id) {
   if (!item) return;
 
   selectedScheduleId = id;
-  document.getElementById("scheduleDate").value = item.date || "";
-  document.getElementById("scheduleTime").value = item.time || "";
-  document.getElementById("scheduleText").value = item.text || "";
-  document.getElementById("scheduleCategory").value = item.category || "기타";
-  document.getElementById("scheduleMessage").textContent =
-    "선택한 일정이 입력창에 불러와졌습니다. 수정 후 저장을 눌러주세요.";
+
+  const scheduleDate = document.getElementById("scheduleDate");
+  const scheduleTime = document.getElementById("scheduleTime");
+  const scheduleText = document.getElementById("scheduleText");
+  const scheduleCategory = document.getElementById("scheduleCategory");
+  const scheduleMessage = document.getElementById("scheduleMessage");
+
+  if (scheduleDate) scheduleDate.value = item.date || "";
+  if (scheduleTime) scheduleTime.value = item.time || "";
+  if (scheduleText) scheduleText.value = item.text || "";
+  if (scheduleCategory) scheduleCategory.value = item.category || "기타";
+
+  if (scheduleMessage) {
+    scheduleMessage.textContent = "선택한 일정이 입력창에 불러와졌습니다. 수정 후 저장을 눌러주세요.";
+  }
 }
 
 async function deleteSelectedSchedule() {
@@ -609,18 +815,26 @@ async function deleteSelectedSchedule() {
   try {
     await deleteDoc(doc(db, "schedules", selectedScheduleId));
     clearScheduleInputs();
-    document.getElementById("scheduleMessage").textContent =
-      "선택한 일정을 삭제했습니다.";
+
+    const scheduleMessage = document.getElementById("scheduleMessage");
+    if (scheduleMessage) {
+      scheduleMessage.textContent = "선택한 일정을 삭제했습니다.";
+    }
   } catch (error) {
     console.error(error);
     alert("일정 삭제 중 오류가 발생했습니다.");
   }
 }
 
+/* =========================
+   전적 기록
+========================= */
+
 function getTeamInputs(prefix) {
   const inputs = [];
   for (let i = 1; i <= MAX_RECORD_TEAM_SIZE; i++) {
-    inputs.push(document.getElementById(`${prefix}${i}`));
+    const el = document.getElementById(`${prefix}${i}`);
+    if (el) inputs.push(el);
   }
   return inputs;
 }
@@ -655,8 +869,10 @@ function startRecordSync() {
     },
     (error) => {
       console.error(error);
-      document.getElementById("recordMessage").textContent =
-        "전적을 불러오는 중 오류가 발생했습니다.";
+      const recordMessage = document.getElementById("recordMessage");
+      if (recordMessage) {
+        recordMessage.textContent = "전적을 불러오는 중 오류가 발생했습니다.";
+      }
     }
   );
 }
@@ -683,11 +899,17 @@ function updateRecordSummary() {
   const overallWinRate =
     totalGames > 0 ? ((overallWins / totalGames) * 100).toFixed(2) : "0.00";
 
-  document.getElementById("recordTotalGames").textContent = totalGames;
-  document.getElementById("recordWinBreakdown").textContent = `${killWins} / ${mixedWins}`;
-  document.getElementById("recordLossBreakdown").textContent = `${killLosses} / ${mixedLosses}`;
-  document.getElementById("recordKillWinRate").textContent = `${killWinRate}%`;
-  document.getElementById("recordOverallWinRate").textContent = `${overallWinRate}%`;
+  const totalGamesEl = document.getElementById("recordTotalGames");
+  const winBreakdownEl = document.getElementById("recordWinBreakdown");
+  const lossBreakdownEl = document.getElementById("recordLossBreakdown");
+  const killWinRateEl = document.getElementById("recordKillWinRate");
+  const overallWinRateEl = document.getElementById("recordOverallWinRate");
+
+  if (totalGamesEl) totalGamesEl.textContent = totalGames;
+  if (winBreakdownEl) winBreakdownEl.textContent = `${killWins} / ${mixedWins}`;
+  if (lossBreakdownEl) lossBreakdownEl.textContent = `${killLosses} / ${mixedLosses}`;
+  if (killWinRateEl) killWinRateEl.textContent = `${killWinRate}%`;
+  if (overallWinRateEl) overallWinRateEl.textContent = `${overallWinRate}%`;
 }
 
 function renderMembersHtml(members) {
@@ -700,6 +922,8 @@ function renderMembersHtml(members) {
 
 function renderRecords() {
   const list = document.getElementById("recordList");
+  if (!list) return;
+
   list.innerHTML = "";
 
   if (recordsCache.length === 0) {
@@ -765,45 +989,64 @@ function selectRecord(id) {
   const item = recordsCache.find((v) => v.id === id);
   if (!item) return;
 
-  document.getElementById("recordDate").value = item.date || "";
-  document.getElementById("recordType").value = item.type || "킬내기";
-  document.getElementById("recordResult").value = item.result || "승리";
-  document.getElementById("recordBalance").value = item.balance || "";
-  document.getElementById("recordPureKills").value = item.pureKills ?? "";
+  const recordDate = document.getElementById("recordDate");
+  const recordType = document.getElementById("recordType");
+  const recordResult = document.getElementById("recordResult");
+  const recordBalance = document.getElementById("recordBalance");
+  const recordPureKills = document.getElementById("recordPureKills");
+  const recordMessage = document.getElementById("recordMessage");
+
+  if (recordDate) recordDate.value = item.date || "";
+  if (recordType) recordType.value = item.type || "킬내기";
+  if (recordResult) recordResult.value = item.result || "승리";
+  if (recordBalance) recordBalance.value = item.balance || "";
+  if (recordPureKills) recordPureKills.value = item.pureKills ?? "";
 
   fillTeamInputs("myTeam", item.myTeam || []);
   fillTeamInputs("enemyTeam", item.enemyTeam || []);
 
-  document.getElementById("recordMessage").textContent =
-    "선택한 전적이 입력창에 불러와졌습니다. 삭제할 수 있습니다.";
+  if (recordMessage) {
+    recordMessage.textContent = "선택한 전적이 입력창에 불러와졌습니다. 삭제할 수 있습니다.";
+  }
 
   renderRecords();
 }
 
 function clearRecordInputs() {
-  document.getElementById("recordDate").value = "";
-  document.getElementById("recordType").value = "킬내기";
-  document.getElementById("recordResult").value = "승리";
-  document.getElementById("recordBalance").value = "";
-  document.getElementById("recordPureKills").value = "";
+  const recordDate = document.getElementById("recordDate");
+  const recordType = document.getElementById("recordType");
+  const recordResult = document.getElementById("recordResult");
+  const recordBalance = document.getElementById("recordBalance");
+  const recordPureKills = document.getElementById("recordPureKills");
+  const recordMessage = document.getElementById("recordMessage");
+
+  if (recordDate) recordDate.value = "";
+  if (recordType) recordType.value = "킬내기";
+  if (recordResult) recordResult.value = "승리";
+  if (recordBalance) recordBalance.value = "";
+  if (recordPureKills) recordPureKills.value = "";
 
   fillTeamInputs("myTeam", []);
   fillTeamInputs("enemyTeam", []);
 
   selectedRecordId = null;
   setDefaultRecordDate();
-  document.getElementById("recordMessage").textContent = "입력값을 초기화했습니다.";
+
+  if (recordMessage) {
+    recordMessage.textContent = "입력값을 초기화했습니다.";
+  }
+
   renderRecords();
 }
 
 async function saveRecord() {
   if (!requireAdmin("전적 저장")) return;
 
-  const date = document.getElementById("recordDate").value;
-  const type = document.getElementById("recordType").value;
-  const result = document.getElementById("recordResult").value;
-  const balance = document.getElementById("recordBalance").value.trim();
-  const pureKills = document.getElementById("recordPureKills").value;
+  const date = document.getElementById("recordDate")?.value || "";
+  const type = document.getElementById("recordType")?.value || "킬내기";
+  const result = document.getElementById("recordResult")?.value || "승리";
+  const balance = document.getElementById("recordBalance")?.value.trim() || "";
+  const pureKills = document.getElementById("recordPureKills")?.value ?? "";
 
   const myTeam = getFilledTeamMembers("myTeam");
   const enemyTeam = getFilledTeamMembers("enemyTeam");
@@ -845,7 +1088,11 @@ async function saveRecord() {
       createdAt: Date.now()
     });
 
-    document.getElementById("recordMessage").textContent = "전적을 저장했습니다.";
+    const recordMessage = document.getElementById("recordMessage");
+    if (recordMessage) {
+      recordMessage.textContent = "전적을 저장했습니다.";
+    }
+
     clearRecordInputs();
   } catch (error) {
     console.error(error);
@@ -867,7 +1114,11 @@ async function deleteSelectedRecord() {
     await deleteDoc(doc(db, "killRecords", selectedRecordId));
     selectedRecordId = null;
     clearRecordInputs();
-    document.getElementById("recordMessage").textContent = "선택한 전적을 삭제했습니다.";
+
+    const recordMessage = document.getElementById("recordMessage");
+    if (recordMessage) {
+      recordMessage.textContent = "선택한 전적을 삭제했습니다.";
+    }
   } catch (error) {
     console.error(error);
     alert("전적 삭제 중 오류가 발생했습니다.");
@@ -875,10 +1126,17 @@ async function deleteSelectedRecord() {
 }
 
 function setDefaultRecordDate() {
+  const recordDate = document.getElementById("recordDate");
+  if (!recordDate) return;
+
   const today = new Date();
-  document.getElementById("recordDate").value =
+  recordDate.value =
     `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
+
+/* =========================
+   전적 상세
+========================= */
 
 function normalizeMembers(members) {
   if (!Array.isArray(members)) return [];
@@ -932,11 +1190,13 @@ function makeStatsTable(headers, rows) {
 }
 
 function renderBalanceStats() {
+  const target = document.getElementById("detailBalanceTable");
+  if (!target) return;
+
   const killOnlyRecords = recordsCache.filter((item) => item.type === "킬내기");
 
   if (!killOnlyRecords.length) {
-    document.getElementById("detailBalanceTable").innerHTML =
-      `<div class="empty-stats">킬내기 전적이 없습니다.</div>`;
+    target.innerHTML = `<div class="empty-stats">킬내기 전적이 없습니다.</div>`;
     return;
   }
 
@@ -955,8 +1215,7 @@ function renderBalanceStats() {
       return [key, `${stat.wins}승 ${stat.losses}패`, stat.rate];
     });
 
-  document.getElementById("detailBalanceTable").innerHTML =
-    makeStatsTable(["밸런스", "전적", "승률"], rows);
+  target.innerHTML = makeStatsTable(["밸런스", "전적", "승률"], rows);
 }
 
 function isThisMonth(dateStr) {
@@ -972,6 +1231,9 @@ function isThisMonth(dateStr) {
 }
 
 function renderMonthStats() {
+  const target = document.getElementById("detailMonthTable");
+  if (!target) return;
+
   const monthRecords = recordsCache.filter((item) => isThisMonth(item.date));
 
   const kill = summarizeRecordList(monthRecords.filter((item) => item.type === "킬내기"));
@@ -986,18 +1248,19 @@ function renderMonthStats() {
     ["공장", `${factory.wins}승 ${factory.losses}패`, factory.rate]
   ];
 
-  document.getElementById("detailMonthTable").innerHTML =
-    makeStatsTable(["이번 달 항목", "전적", "승률"], rows);
+  target.innerHTML = makeStatsTable(["이번 달 항목", "전적", "승률"], rows);
 }
 
 function renderMapStats() {
+  const target = document.getElementById("detailMapTable");
+  if (!target) return;
+
   const rows = ["킬내기", "랜드", "GKL", "공장"].map((type) => {
     const stat = summarizeRecordList(recordsCache.filter((item) => item.type === type));
     return [type, `${stat.wins}승 ${stat.losses}패`, stat.rate];
   });
 
-  document.getElementById("detailMapTable").innerHTML =
-    makeStatsTable(["종류", "전적", "승률"], rows);
+  target.innerHTML = makeStatsTable(["종류", "전적", "승률"], rows);
 }
 
 function renderDetailPage() {
@@ -1024,11 +1287,16 @@ function clearMemberRelationStats() {
   const input = document.getElementById("memberRelationInput");
   if (input) input.value = "";
 
-  document.getElementById("memberRelationSummary").textContent =
-    "비교할 멤버 이름을 입력해 주세요. (수힛 기준)";
+  const summary = document.getElementById("memberRelationSummary");
+  const table = document.getElementById("memberRelationTable");
 
-  document.getElementById("memberRelationTable").innerHTML =
-    `<div class="empty-stats">비교할 멤버를 검색해 주세요.</div>`;
+  if (summary) {
+    summary.textContent = "비교할 멤버 이름을 입력해 주세요. (수힛 기준)";
+  }
+
+  if (table) {
+    table.innerHTML = `<div class="empty-stats">비교할 멤버를 검색해 주세요.</div>`;
+  }
 }
 
 function getBasePerspectiveResult(record) {
@@ -1059,11 +1327,18 @@ function renderMemberRelationStats() {
   }
 
   if (targetName === RELATION_BASE_MEMBER) {
-    document.getElementById("memberRelationSummary").textContent =
-      `기준 멤버는 이미 ${RELATION_BASE_MEMBER}로 고정되어 있습니다. 비교할 다른 멤버를 입력해 주세요.`;
+    const summary = document.getElementById("memberRelationSummary");
+    const table = document.getElementById("memberRelationTable");
 
-    document.getElementById("memberRelationTable").innerHTML =
-      `<div class="empty-stats">${RELATION_BASE_MEMBER}이 아닌 다른 멤버를 입력해 주세요.</div>`;
+    if (summary) {
+      summary.textContent =
+        `기준 멤버는 이미 ${RELATION_BASE_MEMBER}로 고정되어 있습니다. 비교할 다른 멤버를 입력해 주세요.`;
+    }
+
+    if (table) {
+      table.innerHTML =
+        `<div class="empty-stats">${RELATION_BASE_MEMBER}이 아닌 다른 멤버를 입력해 주세요.</div>`;
+    }
     return;
   }
 
@@ -1109,20 +1384,26 @@ function renderMemberRelationStats() {
     }
   });
 
-  if (!relatedMatchCount) {
-    document.getElementById("memberRelationSummary").textContent =
-      `${RELATION_BASE_MEMBER} 기준으로 ${targetName}와 함께 계산할 전적이 없습니다.`;
+  const summary = document.getElementById("memberRelationSummary");
+  const table = document.getElementById("memberRelationTable");
 
-    document.getElementById("memberRelationTable").innerHTML =
-      `<div class="empty-stats">관계 데이터를 찾지 못했습니다.</div>`;
+  if (!relatedMatchCount) {
+    if (summary) {
+      summary.textContent = `${RELATION_BASE_MEMBER} 기준으로 ${targetName}와 함께 계산할 전적이 없습니다.`;
+    }
+
+    if (table) {
+      table.innerHTML = `<div class="empty-stats">관계 데이터를 찾지 못했습니다.</div>`;
+    }
     return;
   }
 
   const sameTotal = sameWins + sameLosses;
   const enemyTotal = enemyWins + enemyLosses;
 
-  document.getElementById("memberRelationSummary").textContent =
-    `${RELATION_BASE_MEMBER} 기준 / 비교 멤버: ${targetName}`;
+  if (summary) {
+    summary.textContent = `${RELATION_BASE_MEMBER} 기준 / 비교 멤버: ${targetName}`;
+  }
 
   const rows = [[
     targetName,
@@ -1134,12 +1415,18 @@ function renderMemberRelationStats() {
     calcRate(enemyWins, enemyTotal)
   ]];
 
-  document.getElementById("memberRelationTable").innerHTML =
-    makeStatsTable(
-      ["멤버", "같은 팀 경기", "같은 팀 전적", "같은 팀 승률", "적팀 경기", "적팀 전적", "적팀 승률"],
-      rows
-    );
+  if (table) {
+    table.innerHTML =
+      makeStatsTable(
+        ["멤버", "같은 팀 경기", "같은 팀 전적", "같은 팀 승률", "적팀 경기", "적팀 전적", "적팀 승률"],
+        rows
+      );
+  }
 }
+
+/* =========================
+   공통
+========================= */
 
 function escapeHtml(value) {
   return String(value)
@@ -1154,6 +1441,7 @@ applySavedTheme();
 updateAdminButton();
 loadHeroImage();
 loadPlayers();
+loadSavedMap();
 setDefaultRecordDate();
 startScheduleSync();
 startRecordSync();
