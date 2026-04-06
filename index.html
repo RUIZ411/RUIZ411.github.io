@@ -63,9 +63,12 @@
           <button class="secondary" onclick="showPage('homePage')">메인으로</button>
         </div>
 
-        <h2>5 vs 5 팀 섞기</h2>
+        <h2>팀 섞기</h2>
         <div class="desc">
-          입력 순서대로 2명씩 같은 티어로 인식합니다. (1-2 / 3-4 / 5-6 / 7-8 / 9-10)
+          최소 10명, 최대 12명까지 입력할 수 있습니다.<br />
+          입력 순서대로 2명씩 같은 티어로 인식합니다.
+          (1-2 / 3-4 / 5-6 / 7-8 / 9-10 / 11-12)<br />
+          팀 섞기는 10명 또는 12명처럼 짝수 인원일 때 진행됩니다.
         </div>
 
         <div class="grid">
@@ -79,6 +82,8 @@
           <input type="text" id="player8" placeholder="플레이어 8" />
           <input type="text" id="player9" placeholder="플레이어 9" />
           <input type="text" id="player10" placeholder="플레이어 10" />
+          <input type="text" id="player11" placeholder="플레이어 11 (선택)" />
+          <input type="text" id="player12" placeholder="플레이어 12 (선택)" />
         </div>
 
         <div class="btn-row">
@@ -99,8 +104,23 @@
         </div>
 
         <div class="message" id="teamMessage">
-          한 번 입력한 멤버는 저장되며, 다음 섞기 때는 직전 결과와 최소 2라인 이상 다르게 섞습니다.
+          최소 10명, 최대 12명까지 입력 가능하며 직전 결과와 완전히 같은 줄은 나오지 않도록 섞습니다.
         </div>
+
+        <div style="height:14px;"></div>
+
+        <h2>맵 추첨기</h2>
+        <div class="desc">
+          팀 섞기 메뉴 안에서 바로 맵을 추첨할 수 있습니다.
+        </div>
+
+        <div class="btn-row">
+          <button class="primary" onclick="drawMap()">맵 추첨</button>
+          <button class="secondary" onclick="copyMap()">맵 복사</button>
+          <button class="secondary" onclick="resetMap()">맵 초기화</button>
+        </div>
+
+        <div class="message" id="mapMessage">맵 추첨 버튼을 눌러주세요.</div>
       </div>
     </div>
 
