@@ -28,10 +28,9 @@ const schedulesCollection = collection(db, "schedules");
 const recordsCollection = collection(db, "killRecords");
 
 const ADMIN_CODE = "suweet0305";
-const MIN_TEAM_PLAYERS = 10;
-const MAX_TEAM_PLAYERS = 12;
 const TEAM_MODE_5V5 = 10;
 const TEAM_MODE_6V6 = 12;
+const MAX_TEAM_PLAYERS = 12;
 
 const MIN_RECORD_TEAM_SIZE = 4;
 const MAX_RECORD_TEAM_SIZE = 8;
@@ -75,6 +74,7 @@ window.resetPlayers = resetPlayers;
 window.setTeamMode = setTeamMode;
 window.togglePairLock = togglePairLock;
 
+window.toggleMapGroup = toggleMapGroup;
 window.toggleMapSelection = toggleMapSelection;
 window.drawMap = drawMap;
 window.copyMap = copyMap;
@@ -99,8 +99,24 @@ window.renderMemberRelationStats = renderMemberRelationStats;
 window.clearMemberRelationStats = clearMemberRelationStats;
 
 /* =========================
-   공통 기본
+   공통
 ========================= */
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeJs(value) {
+  return String(value)
+    .replaceAll("\\", "\\\\")
+    .replaceAll("'", "\\'")
+    .replaceAll('"', '\\"');
+}
 
 function isAdminUnlocked() {
   return localStorage.getItem("adminUnlocked") === "true";
@@ -165,20 +181,26 @@ function toggleDarkMode() {
   }
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
+function showPage(pageId) {
+  document.querySelectorAll(".page").forEach((page) => page.classList.remove("active"));
 
-function escapeJs(value) {
-  return String(value)
-    .replaceAll("\\", "\\\\")
-    .replaceAll("'", "\\'")
-    .replaceAll('"', '\\"');
+  const targetPage = document.getElementById(pageId);
+  if (!targetPage) return;
+
+  targetPage.classList.add("active");
+
+  if (pageId === "schedulePage") {
+    renderCalendar();
+  }
+
+  if (pageId === "detailPage") {
+    renderDetailPage();
+  }
+
+  if (pageId === "teamPage") {
+    applyTeamModeUI();
+    renderMapBoard();
+  }
 }
 
 /* =========================
@@ -224,32 +246,6 @@ function resetHeroImage() {
 
   const input = document.getElementById("heroImageInput");
   if (input) input.value = "";
-}
-
-/* =========================
-   페이지 이동
-========================= */
-
-function showPage(pageId) {
-  document.querySelectorAll(".page").forEach((page) => page.classList.remove("active"));
-
-  const targetPage = document.getElementById(pageId);
-  if (!targetPage) return;
-
-  targetPage.classList.add("active");
-
-  if (pageId === "schedulePage") {
-    renderCalendar();
-  }
-
-  if (pageId === "detailPage") {
-    renderDetailPage();
-  }
-
-  if (pageId === "teamPage") {
-    applyTeamModeUI();
-    renderMapBoard();
-  }
 }
 
 /* =========================
@@ -436,11 +432,6 @@ function getPlayers() {
 }
 
 function validatePlayers(players) {
-  if (players.length < MIN_TEAM_PLAYERS || players.length > MAX_TEAM_PLAYERS) {
-    alert("플레이어 수를 확인해주세요.");
-    return false;
-  }
-
   if (players.some((name) => name === "")) {
     alert(`${currentTeamMode === TEAM_MODE_5V5 ? "5 vs 5" : "6 vs 6"} 모드에 필요한 플레이어를 모두 입력해주세요.`);
     return false;
@@ -493,7 +484,7 @@ function makeTeamsFromPairs() {
 
   if (lockedPairs.length % 2 !== 0) {
     return {
-      error: "팀 고정된 페어 수가 홀수입니다. 팀을 정확히 반으로 나누려면 팀 고정 페어 수를 짝수로 맞춰주세요."
+      error: "팀 고정된 페어 수가 홀수입니다. 팀 고정 페어 수를 짝수로 맞춰주세요."
     };
   }
 
@@ -554,9 +545,7 @@ function countChangedLines(current, previous) {
     const prev1 = previous.team1[i] || "";
     const prev2 = previous.team2[i] || "";
 
-    if (cur1 !== prev1 || cur2 !== prev2) {
-      changed++;
-    }
+    if (cur1 !== prev1 || cur2 !== prev2) changed++;
   }
 
   return changed;
@@ -626,7 +615,6 @@ function shuffleTeams() {
 
   const lockedPairCount = buildPairData().filter((pair) => pair.locked).length;
   const teamMessage = document.getElementById("teamMessage");
-
   if (!teamMessage) return;
 
   if (!previousResult) {
@@ -677,7 +665,7 @@ function copyTeams() {
 }
 
 /* =========================
-   맵 선택 / 추첨
+   맵 선택
 ========================= */
 
 function createDefaultMapSelection() {
@@ -717,6 +705,24 @@ function isMapSelected(groupName, mapName) {
   return (selectedMapsByGroup[groupName] || []).includes(mapName);
 }
 
+function isGroupFullySelected(groupName) {
+  return (selectedMapsByGroup[groupName] || []).length === MAP_GROUPS[groupName].length;
+}
+
+function toggleMapGroup(groupName) {
+  if (!requireAdmin("맵 선택")) return;
+  if (!MAP_GROUPS[groupName]) return;
+
+  if (isGroupFullySelected(groupName)) {
+    selectedMapsByGroup[groupName] = [];
+  } else {
+    selectedMapsByGroup[groupName] = [...MAP_GROUPS[groupName]];
+  }
+
+  saveMapSelectionState();
+  renderMapBoard();
+}
+
 function toggleMapSelection(groupName, mapName) {
   if (!requireAdmin("맵 선택")) return;
   if (!MAP_GROUPS[groupName] || !MAP_GROUPS[groupName].includes(mapName)) return;
@@ -742,13 +748,19 @@ function renderMapBoard() {
     .map((groupName) => {
       const maps = MAP_GROUPS[groupName];
       const selectedCount = (selectedMapsByGroup[groupName] || []).length;
+      const groupChecked = selectedCount > 0;
 
       return `
         <div class="map-group-card">
-          <div class="map-group-header">
-            <span class="map-group-title">${escapeHtml(groupName)}</span>
-            <span class="map-group-count">(${selectedCount})</span>
-          </div>
+          <button
+            type="button"
+            class="map-group-toggle${groupChecked ? " checked" : ""}"
+            onclick="toggleMapGroup('${escapeJs(groupName)}')"
+          >
+            <span class="map-group-check">${groupChecked ? "☑" : "☐"}</span>
+            <span class="map-group-name">${escapeHtml(groupName)}</span>
+          </button>
+
           <div class="map-chip-list">
             ${maps.map((mapName) => {
               const selected = isMapSelected(groupName, mapName);
@@ -758,7 +770,7 @@ function renderMapBoard() {
                   class="map-chip${selected ? " selected" : ""}"
                   onclick="toggleMapSelection('${escapeJs(groupName)}','${escapeJs(mapName)}')"
                 >
-                  ${escapeHtml(mapName)}
+                  ${selected ? "✓ " : ""}${escapeHtml(mapName)}
                 </button>
               `;
             }).join("")}
@@ -799,13 +811,8 @@ function drawMap() {
   const mapMessage = document.getElementById("mapMessage");
   const mapResult = document.getElementById("mapResult");
 
-  if (mapMessage) {
-    mapMessage.textContent = `추첨 맵: ${selected.mapName}`;
-  }
-
-  if (mapResult) {
-    mapResult.textContent = selected.mapName;
-  }
+  if (mapMessage) mapMessage.textContent = `추첨 맵: ${selected.mapName}`;
+  if (mapResult) mapResult.textContent = selected.mapName;
 }
 
 function copyMap() {
@@ -860,13 +867,8 @@ function loadSavedMap() {
   const mapMessage = document.getElementById("mapMessage");
   const mapResult = document.getElementById("mapResult");
 
-  if (savedMap && mapMessage) {
-    mapMessage.textContent = `추첨 맵: ${savedMap}`;
-  }
-
-  if (savedMap && mapResult) {
-    mapResult.textContent = savedMap;
-  }
+  if (savedMap && mapMessage) mapMessage.textContent = `추첨 맵: ${savedMap}`;
+  if (savedMap && mapResult) mapResult.textContent = savedMap;
 }
 
 /* =========================
@@ -1652,10 +1654,7 @@ function getBasePerspectiveResult(record) {
 
   const myTeamWon = record.result === "승리";
 
-  if (baseInMy) {
-    return myTeamWon ? "승리" : "패배";
-  }
-
+  if (baseInMy) return myTeamWon ? "승리" : "패배";
   return myTeamWon ? "패배" : "승리";
 }
 
@@ -1678,8 +1677,7 @@ function renderMemberRelationStats() {
     }
 
     if (table) {
-      table.innerHTML =
-        `<div class="empty-stats">${RELATION_BASE_MEMBER}이 아닌 다른 멤버를 입력해 주세요.</div>`;
+      table.innerHTML = `<div class="empty-stats">${RELATION_BASE_MEMBER}이 아닌 다른 멤버를 입력해 주세요.</div>`;
     }
     return;
   }
@@ -1758,11 +1756,10 @@ function renderMemberRelationStats() {
   ]];
 
   if (table) {
-    table.innerHTML =
-      makeStatsTable(
-        ["멤버", "같은 팀 경기", "같은 팀 전적", "같은 팀 승률", "적팀 경기", "적팀 전적", "적팀 승률"],
-        rows
-      );
+    table.innerHTML = makeStatsTable(
+      ["멤버", "같은 팀 경기", "같은 팀 전적", "같은 팀 승률", "적팀 경기", "적팀 전적", "적팀 승률"],
+      rows
+    );
   }
 }
 
