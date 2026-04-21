@@ -255,10 +255,6 @@ function getInputs() {
   return inputs;
 }
 
-function getRequiredPlayerCount() {
-  return currentTeamMode;
-}
-
 function savePlayers() {
   const values = [];
   for (let i = 1; i <= MAX_TEAM_PLAYERS; i++) {
@@ -344,9 +340,6 @@ function setLockButtonState(evenIndex, locked) {
   btn.dataset.locked = locked ? "true" : "false";
   btn.textContent = locked ? "🔒" : "🔓";
   btn.setAttribute("aria-pressed", locked ? "true" : "false");
-  btn.title = locked
-    ? `플레이어 ${evenIndex - 1}-${evenIndex} 페어 팀 고정 해제`
-    : `플레이어 ${evenIndex - 1}-${evenIndex} 페어 팀 고정`;
 }
 
 function isPairLocked(evenIndex) {
@@ -365,7 +358,6 @@ function togglePairLock(evenIndex) {
 }
 
 function setTeamMode(playerCount) {
-  if (!requireAdmin("인원 모드 변경")) return;
   if (playerCount !== TEAM_MODE_5V5 && playerCount !== TEAM_MODE_6V6) return;
 
   currentTeamMode = playerCount;
@@ -446,10 +438,9 @@ function resetPlayers() {
 }
 
 function getPlayers() {
-  const requiredCount = getRequiredPlayerCount();
   const players = [];
 
-  for (let i = 1; i <= requiredCount; i++) {
+  for (let i = 1; i <= currentTeamMode; i++) {
     const input = getTeamInput(i);
     players.push(input ? input.value.trim() : "");
   }
@@ -458,11 +449,6 @@ function getPlayers() {
 }
 
 function validatePlayers(players) {
-  if (players.length !== currentTeamMode) {
-    alert("현재 모드에 맞는 플레이어 수를 확인해주세요.");
-    return false;
-  }
-
   if (players.some((name) => name === "")) {
     alert(`${currentTeamMode === TEAM_MODE_5V5 ? "5 vs 5" : "6 vs 6"} 모드에 필요한 플레이어를 모두 입력해주세요.`);
     return false;
@@ -515,7 +501,7 @@ function makeTeamsFromPairs() {
 
   if (lockedPairs.length % 2 !== 0) {
     return {
-      error: "팀 고정된 페어 수가 홀수입니다. 팀을 정확히 반으로 나누려면 팀 고정 페어 수를 짝수로 맞춰주세요."
+      error: "팀 고정된 페어 수가 홀수입니다. 정확히 반으로 나누려면 팀 고정 페어 수를 짝수로 맞춰주세요."
     };
   }
 
@@ -605,7 +591,6 @@ function shuffleTeams() {
   if (!requireAdmin("팀 섞기")) return;
 
   const players = getPlayers();
-
   if (!validatePlayers(players)) return;
 
   const previousResult = JSON.parse(localStorage.getItem("lastTeams") || "null");
@@ -738,11 +723,7 @@ function renderMapSelectionUI() {
     categoryLabel.textContent = `${selectedMapCategory} (${(selectedMapsByCategory[selectedMapCategory] || []).length})`;
   }
 
-  const container =
-    document.getElementById("mapSelectionArea") ||
-    document.getElementById("mapSelectionGrid") ||
-    document.getElementById("mapSelectionList");
-
+  const container = document.getElementById("mapSelectionArea");
   if (!container) return;
 
   const selectedMaps = selectedMapsByCategory[selectedMapCategory] || [];
@@ -781,13 +762,8 @@ function drawMap() {
   const mapMessage = document.getElementById("mapMessage");
   const mapResult = document.getElementById("mapResult");
 
-  if (mapMessage) {
-    mapMessage.textContent = `추첨 맵: ${selectedMap}`;
-  }
-
-  if (mapResult) {
-    mapResult.textContent = selectedMap;
-  }
+  if (mapMessage) mapMessage.textContent = `추첨 맵: ${selectedMap}`;
+  if (mapResult) mapResult.textContent = selectedMap;
 }
 
 function copyMap() {
@@ -806,10 +782,7 @@ function copyMap() {
   navigator.clipboard.writeText(sourceText)
     .then(() => {
       const mapMessage = document.getElementById("mapMessage");
-      const mapResult = document.getElementById("mapResult");
-
       if (mapMessage) mapMessage.textContent = `추첨 맵: ${sourceText} (복사됨)`;
-      if (mapResult) mapResult.textContent = `${sourceText} (복사됨)`;
     })
     .catch(() => {
       const textarea = document.createElement("textarea");
@@ -820,10 +793,7 @@ function copyMap() {
       document.body.removeChild(textarea);
 
       const mapMessage = document.getElementById("mapMessage");
-      const mapResult = document.getElementById("mapResult");
-
       if (mapMessage) mapMessage.textContent = `추첨 맵: ${sourceText} (복사됨)`;
-      if (mapResult) mapResult.textContent = `${sourceText} (복사됨)`;
     });
 }
 
@@ -837,13 +807,8 @@ function resetMap() {
   const mapMessage = document.getElementById("mapMessage");
   const mapResult = document.getElementById("mapResult");
 
-  if (mapMessage) {
-    mapMessage.textContent = "맵 추첨 버튼을 눌러주세요.";
-  }
-
-  if (mapResult) {
-    mapResult.textContent = "-";
-  }
+  if (mapMessage) mapMessage.textContent = "맵 추첨 버튼을 눌러주세요.";
+  if (mapResult) mapResult.textContent = "-";
 
   renderMapSelectionUI();
 }
@@ -853,13 +818,8 @@ function loadSavedMap() {
   const mapMessage = document.getElementById("mapMessage");
   const mapResult = document.getElementById("mapResult");
 
-  if (savedMap && mapMessage) {
-    mapMessage.textContent = `추첨 맵: ${savedMap}`;
-  }
-
-  if (savedMap && mapResult) {
-    mapResult.textContent = savedMap;
-  }
+  if (savedMap && mapMessage) mapMessage.textContent = `추첨 맵: ${savedMap}`;
+  if (savedMap && mapResult) mapResult.textContent = savedMap;
 }
 
 /* =========================
