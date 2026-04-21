@@ -369,7 +369,7 @@ body.dark .message {
 
 .team-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 0.9fr);
+  grid-template-columns: minmax(0, 1.7fr) minmax(360px, 0.9fr);
   gap: 22px;
   align-items: start;
 }
@@ -498,57 +498,71 @@ body.dark .message {
   background: linear-gradient(180deg, rgba(30,58,138,0.28), rgba(2,6,23,0.92));
 }
 
-.map-category-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.map-category-btn {
-  border-radius: 14px;
-  border: 1px solid rgba(148,163,184,0.22);
-  background: rgba(15,23,42,0.9);
-  color: #f8fafc;
-  font-weight: 700;
-  padding: 12px 10px;
-}
-
-.map-category-btn.active {
-  background: linear-gradient(90deg, var(--blue), var(--purple));
-  border-color: transparent;
-  color: #fff;
-}
-
-.selected-map-category {
-  color: #e2e8f0;
-  font-size: 14px;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.map-selection-area {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.map-board {
   margin-bottom: 14px;
 }
 
-.map-item {
-  border-radius: 12px;
-  border: 1px solid rgba(148,163,184,0.2);
-  background: rgba(255,255,255,0.96);
-  color: #0f172a;
-  padding: 10px 12px;
-  font-size: 14px;
-  font-weight: 700;
-  min-height: auto;
+.map-board-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
-.map-item.selected {
-  background: linear-gradient(90deg, var(--blue), var(--purple));
-  color: #fff;
-  border-color: transparent;
+.map-category-card {
+  border: 1px solid rgba(148,163,184,0.16);
+  background: rgba(15,23,42,0.58);
+  border-radius: 18px;
+  padding: 12px;
+}
+
+.map-category-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #f8fafc;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.map-category-head input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.map-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.map-chip {
+  border-radius: 10px;
+  border: 1px solid rgba(148,163,184,0.16);
+  background: rgba(255,255,255,0.04);
+  color: #e5e7eb;
+  padding: 8px 11px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.map-chip:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.map-chip.off {
+  background: rgba(15,23,42,0.9);
+  color: #718096;
+  border-color: rgba(148,163,184,0.1);
+}
+
+.map-chip.on {
+  background: rgba(255,255,255,0.06);
+  color: #ffffff;
+  border-color: rgba(96,165,250,0.32);
 }
 
 #teamPage .teams {
@@ -1133,6 +1147,10 @@ body.dark .stats-table th {
   .team-layout {
     grid-template-columns: 1fr;
   }
+
+  .map-board-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 @media (max-width: 900px) {
@@ -1150,6 +1168,10 @@ body.dark .stats-table th {
 
   .record-summary {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .map-board-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1177,10 +1199,6 @@ body.dark .stats-table th {
 
   .mode-card-grid {
     grid-template-columns: 1fr;
-  }
-
-  .map-category-row {
-    grid-template-columns: 1fr 1fr;
   }
 
   .record-summary,
