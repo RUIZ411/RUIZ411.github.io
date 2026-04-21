@@ -173,41 +173,7 @@
                 체크 해제한 맵은 추첨에서 제외됩니다. 아무 것도 해제하지 않으면 전체 맵에서 그대로 추첨합니다.
               </div>
 
-              <div class="map-board">
-                <div class="map-board-grid">
-                  <div class="map-category-card">
-                    <label class="map-category-head">
-                      <input type="checkbox" id="cat-control" onchange="toggleCategorySelection('control')" />
-                      <span>쟁탈</span>
-                    </label>
-                    <div class="map-chip-list" id="mapGroup-control"></div>
-                  </div>
-
-                  <div class="map-category-card">
-                    <label class="map-category-head">
-                      <input type="checkbox" id="cat-escort" onchange="toggleCategorySelection('escort')" />
-                      <span>호위</span>
-                    </label>
-                    <div class="map-chip-list" id="mapGroup-escort"></div>
-                  </div>
-
-                  <div class="map-category-card">
-                    <label class="map-category-head">
-                      <input type="checkbox" id="cat-hybrid" onchange="toggleCategorySelection('hybrid')" />
-                      <span>혼합</span>
-                    </label>
-                    <div class="map-chip-list" id="mapGroup-hybrid"></div>
-                  </div>
-
-                  <div class="map-category-card">
-                    <label class="map-category-head">
-                      <input type="checkbox" id="cat-push" onchange="toggleCategorySelection('push')" />
-                      <span>밀기</span>
-                    </label>
-                    <div class="map-chip-list" id="mapGroup-push"></div>
-                  </div>
-                </div>
-              </div>
+              <div id="mapBoard" class="map-board"></div>
 
               <div class="btn-row">
                 <button class="primary" onclick="drawMap()">맵 추첨하기</button>
