@@ -57,76 +57,69 @@
       </div>
     </div>
 
-    
     <div id="teamPage" class="page">
-      <div class="card team-page-card">
+      <div class="card">
         <div class="top-bar">
           <button class="secondary" onclick="showPage('homePage')">메인으로</button>
         </div>
 
         <div class="team-layout">
-          <div class="team-main-panel">
+          <div class="team-left-panel">
             <h2>팀 섞기</h2>
+
             <div class="desc team-desc">
               선택한 인원 모드에 맞춰 플레이어를 입력하세요.<br />
-              입력 순서대로 2명씩 같은 티어로 인식합니다.
-              (1-2 / 3-4 / 5-6 / 7-8 / 9-10 / 11-12)<br />
-              플레이어 2, 4, 6, 8, 10, 12 옆의 🔒/🔓 버튼으로 각 페어를 같은 팀으로 고정할 수 있습니다.
+              입력 순서대로 2명씩 같은 티어로 인식합니다. (1-2 / 3-4 / 5-6 / 7-8 / 9-10 / 11-12)<br />
+              플레이어 2, 4, 6, 8, 10, 12 옆의 🔒 / 🔓 버튼으로 각 페어를 같은 팀으로 고정할 수 있습니다.
             </div>
 
-            <div class="team-input-grid">
-              <div class="team-player-row">
+            <div class="team-player-grid">
+              <div class="player-row">
                 <input type="text" id="player1" placeholder="플레이어 1" />
               </div>
-
-              <div class="team-player-row team-player-row-lockable">
+              <div class="player-row player-row-lock">
                 <input type="text" id="player2" placeholder="플레이어 2" />
-                <button type="button" class="lock-btn" id="lock2" onclick="togglePairLock(2)" aria-label="1-2 페어 팀 고정">🔓</button>
+                <button type="button" class="lock-btn" id="lock2" data-locked="false" onclick="togglePairLock(2)">🔓</button>
               </div>
 
-              <div class="team-player-row">
+              <div class="player-row">
                 <input type="text" id="player3" placeholder="플레이어 3" />
               </div>
-
-              <div class="team-player-row team-player-row-lockable">
+              <div class="player-row player-row-lock">
                 <input type="text" id="player4" placeholder="플레이어 4" />
-                <button type="button" class="lock-btn" id="lock4" onclick="togglePairLock(4)" aria-label="3-4 페어 팀 고정">🔓</button>
+                <button type="button" class="lock-btn" id="lock4" data-locked="false" onclick="togglePairLock(4)">🔓</button>
               </div>
 
-              <div class="team-player-row">
+              <div class="player-row">
                 <input type="text" id="player5" placeholder="플레이어 5" />
               </div>
-
-              <div class="team-player-row team-player-row-lockable">
+              <div class="player-row player-row-lock">
                 <input type="text" id="player6" placeholder="플레이어 6" />
-                <button type="button" class="lock-btn" id="lock6" onclick="togglePairLock(6)" aria-label="5-6 페어 팀 고정">🔓</button>
+                <button type="button" class="lock-btn" id="lock6" data-locked="false" onclick="togglePairLock(6)">🔓</button>
               </div>
 
-              <div class="team-player-row">
+              <div class="player-row">
                 <input type="text" id="player7" placeholder="플레이어 7" />
               </div>
-
-              <div class="team-player-row team-player-row-lockable">
+              <div class="player-row player-row-lock">
                 <input type="text" id="player8" placeholder="플레이어 8" />
-                <button type="button" class="lock-btn" id="lock8" onclick="togglePairLock(8)" aria-label="7-8 페어 팀 고정">🔓</button>
+                <button type="button" class="lock-btn" id="lock8" data-locked="false" onclick="togglePairLock(8)">🔓</button>
               </div>
 
-              <div class="team-player-row">
+              <div class="player-row">
                 <input type="text" id="player9" placeholder="플레이어 9" />
               </div>
-
-              <div class="team-player-row team-player-row-lockable">
+              <div class="player-row player-row-lock">
                 <input type="text" id="player10" placeholder="플레이어 10" />
-                <button type="button" class="lock-btn" id="lock10" onclick="togglePairLock(10)" aria-label="9-10 페어 팀 고정">🔓</button>
+                <button type="button" class="lock-btn" id="lock10" data-locked="false" onclick="togglePairLock(10)">🔓</button>
               </div>
 
-              <div class="team-player-row">
+              <div class="player-row">
                 <input type="text" id="player11" placeholder="플레이어 11 (선택)" />
               </div>
-
-              <div class="team-player-row team-player-row-lockable">
+              <div class="player-row player-row-lock">
                 <input type="text" id="player12" placeholder="플레이어 12 (선택)" />
-                <button type="button" class="lock-btn" id="lock12" onclick="togglePairLock(12)" aria-label="11-12 페어 팀 고정">🔓</button>
+                <button type="button" class="lock-btn" id="lock12" data-locked="false" onclick="togglePairLock(12)">🔓</button>
               </div>
             </div>
 
@@ -148,60 +141,61 @@
             </div>
 
             <div class="message" id="teamMessage">
-              인원 모드를 선택한 뒤 팀을 섞어주세요. 직전 결과와 완전히 같은 줄은 나오지 않도록 섞습니다.
+              직전 결과와 완전히 같은 줄 없이, 최소 2라인 이상 다르게 섞습니다.
             </div>
           </div>
 
-          <div class="team-side-panel">
+          <div class="team-right-panel">
             <div class="side-card">
-              <h3 class="side-card-title">인원 모드 선택</h3>
-              <div class="side-card-desc">팀 섞기 인원을 선택하세요.</div>
+              <h3 class="side-title">인원 모드 선택</h3>
+              <div class="side-desc">팀 섞기 인원을 선택하세요.</div>
 
-              <div class="mode-grid">
-                <button type="button" class="mode-card active" id="mode5v5" onclick="setTeamMode('5v5')">
-                  <span class="mode-card-title">5 vs 5</span>
-                  <span class="mode-card-desc">총 10명</span>
-                  <span class="mode-card-sub">5명씩 팀 구성</span>
+              <div class="mode-card-grid">
+                <button type="button" id="mode5Btn" class="mode-card active" onclick="setTeamMode(10)">
+                  <strong>5 vs 5</strong>
+                  <span>총 10명</span>
+                  <span>5명씩 팀 구성</span>
                 </button>
 
-                <button type="button" class="mode-card" id="mode6v6" onclick="setTeamMode('6v6')">
-                  <span class="mode-card-title">6 vs 6</span>
-                  <span class="mode-card-desc">총 12명</span>
-                  <span class="mode-card-sub">6명씩 팀 구성</span>
+                <button type="button" id="mode6Btn" class="mode-card" onclick="setTeamMode(12)">
+                  <strong>6 vs 6</strong>
+                  <span>총 12명</span>
+                  <span>6명씩 팀 구성</span>
                 </button>
               </div>
 
-              <div class="message compact-message" id="modeMessage">
-                선택한 모드에 따라 입력 가능한 플레이어 수가 변경됩니다.
-              </div>
+              <div class="message" id="teamModeInfo">현재 5 vs 5 모드입니다. 총 10명을 입력합니다.</div>
             </div>
 
             <div class="side-card">
-              <h3 class="side-card-title">맵 선택</h3>
-              <div class="side-card-desc">카테고리를 선택한 후 맵을 고르거나, 선택 없이 전체를 그대로 추첨할 수 있습니다.</div>
-
-              <div class="map-category-tabs">
-                <button type="button" class="map-category-btn active" id="categoryBtn-쟁탈" onclick="selectMapCategory('쟁탈')">쟁탈</button>
-                <button type="button" class="map-category-btn" id="categoryBtn-호위" onclick="selectMapCategory('호위')">호위</button>
-                <button type="button" class="map-category-btn" id="categoryBtn-혼합" onclick="selectMapCategory('혼합')">혼합</button>
-                <button type="button" class="map-category-btn" id="categoryBtn-밀기" onclick="selectMapCategory('밀기')">밀기</button>
+              <h3 class="side-title">맵 선택</h3>
+              <div class="side-desc">
+                카테고리를 선택한 후 맵을 고르거나, 선택 없이 전체를 그대로 추첨할 수 있습니다.
               </div>
 
-              <div class="map-card-grid" id="mapCardGrid"></div>
+              <div class="map-category-row">
+                <button type="button" class="map-category-btn active" data-map-category="쟁탈" onclick="selectMapCategory('쟁탈')">쟁탈</button>
+                <button type="button" class="map-category-btn" data-map-category="호위" onclick="selectMapCategory('호위')">호위</button>
+                <button type="button" class="map-category-btn" data-map-category="혼합" onclick="selectMapCategory('혼합')">혼합</button>
+                <button type="button" class="map-category-btn" data-map-category="밀기" onclick="selectMapCategory('밀기')">밀기</button>
+              </div>
 
-              <div class="btn-row side-btn-row">
+              <div class="selected-map-category" id="selectedMapCategoryLabel">쟁탈 (5)</div>
+              <div id="mapSelectionArea" class="map-selection-area"></div>
+
+              <div class="btn-row">
                 <button class="primary" onclick="drawMap()">맵 추첨하기</button>
                 <button class="secondary" onclick="copyMap()">선택 맵 복사</button>
                 <button class="secondary" onclick="resetMap()">선택 초기화</button>
               </div>
 
-              <div class="message" id="mapMessage">카테고리를 고른 뒤 맵을 선택하거나 바로 추첨할 수 있습니다.</div>
+              <div class="message" id="mapMessage">맵 추첨 버튼을 눌러주세요.</div>
+              <div id="mapResult" style="display:none;">-</div>
             </div>
           </div>
         </div>
       </div>
     </div>
-
 
     <div id="schedulePage" class="page">
       <div class="calendar-page">
@@ -398,26 +392,18 @@
             <h3 class="detail-title">펀킬 및 다파전 승률</h3>
             <div id="detailMapTable"></div>
           </div>
-        </div>
 
-        <div class="detail-card relation-search-card">
-          <h3 class="detail-title">야스오 추적기</h3>
-          <div class="desc detail-desc">
-            비교할 멤버 이름 1명을 입력하면, 수힛 기준으로 같은 팀일 때 / 적팀일 때 승률을 보여줍니다.
-          </div>
+          <div class="detail-card full-span relation-search-card">
+            <h3 class="detail-title small">야스오 추적기</h3>
+            <div class="detail-desc">수힛 기준으로 특정 멤버와 같은 팀 / 적팀 전적을 확인합니다.</div>
 
-          <div class="relation-search-row">
-            <input type="text" id="memberRelationInput" placeholder="예: 수힛" />
-            <button class="primary" onclick="renderMemberRelationStats()">검색</button>
-            <button class="secondary" onclick="clearMemberRelationStats()">초기화</button>
-          </div>
+            <div class="relation-search-row">
+              <input type="text" id="memberRelationInput" placeholder="비교할 멤버 이름 입력" />
+              <button class="primary" onclick="renderMemberRelationStats()">검색</button>
+              <button class="secondary" onclick="clearMemberRelationStats()">초기화</button>
+            </div>
 
-          <div id="memberRelationSummary" class="message relation-message">
-            비교할 멤버 이름을 입력해 주세요. (수힛 기준)
-          </div>
-
-          <div class="detail-card inner-detail-card">
-            <h3 class="detail-title small">수힛 기준 관계 승률</h3>
+            <div class="message relation-message" id="memberRelationSummary">비교할 멤버 이름을 입력해 주세요. (수힛 기준)</div>
             <div id="memberRelationTable"></div>
           </div>
         </div>
