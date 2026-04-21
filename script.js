@@ -27,17 +27,17 @@ const db = getFirestore(app);
 const schedulesCollection = collection(db, "schedules");
 const recordsCollection = collection(db, "killRecords");
 
+const ADMIN_CODE = "suweet0305";
 const MIN_TEAM_PLAYERS = 10;
 const MAX_TEAM_PLAYERS = 12;
-const ADMIN_CODE = "suweet0305";
+const TEAM_MODE_5V5 = 10;
+const TEAM_MODE_6V6 = 12;
+
 const MIN_RECORD_TEAM_SIZE = 4;
 const MAX_RECORD_TEAM_SIZE = 8;
 const RELATION_BASE_MEMBER = "수힛";
 
-const TEAM_MODE_5V5 = 10;
-const TEAM_MODE_6V6 = 12;
-
-const MAP_CATEGORIES = {
+const MAP_GROUPS = {
   "쟁탈": ["네팔", "리장 타워", "부산", "오아시스", "일리오스"],
   "호위": ["66번 국도", "지브롤터", "도라도", "쓰레기촌"],
   "혼합": ["눔바니", "아이헨발데", "왕의 길", "할리우드"],
@@ -45,8 +45,7 @@ const MAP_CATEGORIES = {
 };
 
 let currentTeamMode = TEAM_MODE_5V5;
-let selectedMapCategory = "쟁탈";
-let selectedMapsByCategory = createDefaultMapSelection();
+let selectedMapsByGroup = createDefaultMapSelection();
 
 let calendarYear = new Date().getFullYear();
 let calendarMonth = new Date().getMonth();
@@ -76,7 +75,6 @@ window.resetPlayers = resetPlayers;
 window.setTeamMode = setTeamMode;
 window.togglePairLock = togglePairLock;
 
-window.selectMapCategory = selectMapCategory;
 window.toggleMapSelection = toggleMapSelection;
 window.drawMap = drawMap;
 window.copyMap = copyMap;
@@ -99,6 +97,10 @@ window.deleteSelectedRecord = deleteSelectedRecord;
 window.renderDetailPage = renderDetailPage;
 window.renderMemberRelationStats = renderMemberRelationStats;
 window.clearMemberRelationStats = clearMemberRelationStats;
+
+/* =========================
+   공통 기본
+========================= */
 
 function isAdminUnlocked() {
   return localStorage.getItem("adminUnlocked") === "true";
@@ -163,6 +165,26 @@ function toggleDarkMode() {
   }
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeJs(value) {
+  return String(value)
+    .replaceAll("\\", "\\\\")
+    .replaceAll("'", "\\'")
+    .replaceAll('"', '\\"');
+}
+
+/* =========================
+   메인 이미지
+========================= */
+
 function loadHeroImage() {
   const savedImage = localStorage.getItem("heroImage");
   if (savedImage) {
@@ -204,6 +226,10 @@ function resetHeroImage() {
   if (input) input.value = "";
 }
 
+/* =========================
+   페이지 이동
+========================= */
+
 function showPage(pageId) {
   document.querySelectorAll(".page").forEach((page) => page.classList.remove("active"));
 
@@ -222,21 +248,13 @@ function showPage(pageId) {
 
   if (pageId === "teamPage") {
     applyTeamModeUI();
-    renderMapSelectionUI();
+    renderMapBoard();
   }
 }
 
 /* =========================
-   팀 섞기 / 맵 선택
+   팀 섞기
 ========================= */
-
-function createDefaultMapSelection() {
-  const result = {};
-  Object.keys(MAP_CATEGORIES).forEach((category) => {
-    result[category] = [...MAP_CATEGORIES[category]];
-  });
-  return result;
-}
 
 function getTeamInput(index) {
   return document.getElementById(`player${index}`);
@@ -264,6 +282,18 @@ function savePlayers() {
   localStorage.setItem("players", JSON.stringify(values));
 }
 
+function loadPlayers() {
+  const saved = JSON.parse(localStorage.getItem("players") || "[]");
+
+  for (let i = 1; i <= MAX_TEAM_PLAYERS; i++) {
+    const input = getTeamInput(i);
+    if (!input) continue;
+
+    input.value = saved[i - 1] || "";
+    input.addEventListener("input", savePlayers);
+  }
+}
+
 function saveTeamMode() {
   localStorage.setItem("teamMode", String(currentTeamMode));
 }
@@ -274,62 +304,6 @@ function loadTeamMode() {
     currentTeamMode = saved;
   } else {
     currentTeamMode = TEAM_MODE_5V5;
-  }
-}
-
-function saveLocks() {
-  const lockState = {};
-  for (let i = 2; i <= MAX_TEAM_PLAYERS; i += 2) {
-    lockState[i] = isPairLocked(i);
-  }
-  localStorage.setItem("teamPairLocks", JSON.stringify(lockState));
-}
-
-function loadLocks() {
-  const saved = JSON.parse(localStorage.getItem("teamPairLocks") || "{}");
-  for (let i = 2; i <= MAX_TEAM_PLAYERS; i += 2) {
-    setLockButtonState(i, !!saved[i]);
-  }
-}
-
-function saveMapSelectionState() {
-  localStorage.setItem("selectedMapCategory", selectedMapCategory);
-  localStorage.setItem("selectedMapsByCategory", JSON.stringify(selectedMapsByCategory));
-}
-
-function loadMapSelectionState() {
-  const savedCategory = localStorage.getItem("selectedMapCategory");
-  if (savedCategory && MAP_CATEGORIES[savedCategory]) {
-    selectedMapCategory = savedCategory;
-  }
-
-  const savedMaps = JSON.parse(localStorage.getItem("selectedMapsByCategory") || "null");
-  if (savedMaps && typeof savedMaps === "object") {
-    const normalized = createDefaultMapSelection();
-
-    Object.keys(MAP_CATEGORIES).forEach((category) => {
-      if (Array.isArray(savedMaps[category])) {
-        normalized[category] = savedMaps[category].filter((mapName) =>
-          MAP_CATEGORIES[category].includes(mapName)
-        );
-      }
-    });
-
-    selectedMapsByCategory = normalized;
-  } else {
-    selectedMapsByCategory = createDefaultMapSelection();
-  }
-}
-
-function loadPlayers() {
-  const saved = JSON.parse(localStorage.getItem("players") || "[]");
-
-  for (let i = 1; i <= MAX_TEAM_PLAYERS; i++) {
-    const input = getTeamInput(i);
-    if (!input) continue;
-
-    input.value = saved[i - 1] || "";
-    input.addEventListener("input", savePlayers);
   }
 }
 
@@ -345,6 +319,21 @@ function setLockButtonState(evenIndex, locked) {
 function isPairLocked(evenIndex) {
   const btn = getLockButton(evenIndex);
   return btn ? btn.dataset.locked === "true" : false;
+}
+
+function saveLocks() {
+  const lockState = {};
+  for (let i = 2; i <= MAX_TEAM_PLAYERS; i += 2) {
+    lockState[i] = isPairLocked(i);
+  }
+  localStorage.setItem("teamPairLocks", JSON.stringify(lockState));
+}
+
+function loadLocks() {
+  const saved = JSON.parse(localStorage.getItem("teamPairLocks") || "{}");
+  for (let i = 2; i <= MAX_TEAM_PLAYERS; i += 2) {
+    setLockButtonState(i, !!saved[i]);
+  }
 }
 
 function togglePairLock(evenIndex) {
@@ -380,11 +369,11 @@ function applyTeamModeUI() {
   if (mode5Btn) mode5Btn.classList.toggle("active", currentTeamMode === TEAM_MODE_5V5);
   if (mode6Btn) mode6Btn.classList.toggle("active", currentTeamMode === TEAM_MODE_6V6);
 
+  const is5v5 = currentTeamMode === TEAM_MODE_5V5;
+
   const player11 = getTeamInput(11);
   const player12 = getTeamInput(12);
   const lock12 = getLockButton(12);
-
-  const is5v5 = currentTeamMode === TEAM_MODE_5V5;
 
   if (player11) {
     player11.disabled = is5v5;
@@ -439,16 +428,19 @@ function resetPlayers() {
 
 function getPlayers() {
   const players = [];
-
   for (let i = 1; i <= currentTeamMode; i++) {
     const input = getTeamInput(i);
     players.push(input ? input.value.trim() : "");
   }
-
   return players;
 }
 
 function validatePlayers(players) {
+  if (players.length < MIN_TEAM_PLAYERS || players.length > MAX_TEAM_PLAYERS) {
+    alert("플레이어 수를 확인해주세요.");
+    return false;
+  }
+
   if (players.some((name) => name === "")) {
     alert(`${currentTeamMode === TEAM_MODE_5V5 ? "5 vs 5" : "6 vs 6"} 모드에 필요한 플레이어를 모두 입력해주세요.`);
     return false;
@@ -501,7 +493,7 @@ function makeTeamsFromPairs() {
 
   if (lockedPairs.length % 2 !== 0) {
     return {
-      error: "팀 고정된 페어 수가 홀수입니다. 정확히 반으로 나누려면 팀 고정 페어 수를 짝수로 맞춰주세요."
+      error: "팀 고정된 페어 수가 홀수입니다. 팀을 정확히 반으로 나누려면 팀 고정 페어 수를 짝수로 맞춰주세요."
     };
   }
 
@@ -634,6 +626,7 @@ function shuffleTeams() {
 
   const lockedPairCount = buildPairData().filter((pair) => pair.locked).length;
   const teamMessage = document.getElementById("teamMessage");
+
   if (!teamMessage) return;
 
   if (!previousResult) {
@@ -650,12 +643,8 @@ function shuffleTeams() {
 function copyTeams() {
   if (!requireAdmin("팀 복사")) return;
 
-  const team1Items = Array.from(document.querySelectorAll("#team1 li")).map((li) =>
-    li.textContent.trim()
-  );
-  const team2Items = Array.from(document.querySelectorAll("#team2 li")).map((li) =>
-    li.textContent.trim()
-  );
+  const team1Items = Array.from(document.querySelectorAll("#team1 li")).map((li) => li.textContent.trim());
+  const team2Items = Array.from(document.querySelectorAll("#team2 li")).map((li) => li.textContent.trim());
 
   if (team1Items.length === 0 && team2Items.length === 0) {
     alert("먼저 팀을 섞어주세요.");
@@ -687,120 +676,173 @@ function copyTeams() {
     });
 }
 
-function selectMapCategory(category) {
-  if (!MAP_CATEGORIES[category]) return;
+/* =========================
+   맵 선택 / 추첨
+========================= */
 
-  selectedMapCategory = category;
-  saveMapSelectionState();
-  renderMapSelectionUI();
+function createDefaultMapSelection() {
+  const result = {};
+  Object.keys(MAP_GROUPS).forEach((groupName) => {
+    result[groupName] = [...MAP_GROUPS[groupName]];
+  });
+  return result;
 }
 
-function toggleMapSelection(category, mapName) {
-  if (!requireAdmin("맵 선택")) return;
-  if (!MAP_CATEGORIES[category] || !MAP_CATEGORIES[category].includes(mapName)) return;
+function saveMapSelectionState() {
+  localStorage.setItem("selectedMapsByGroup", JSON.stringify(selectedMapsByGroup));
+}
 
-  const current = selectedMapsByCategory[category] || [];
+function loadMapSelectionState() {
+  const saved = JSON.parse(localStorage.getItem("selectedMapsByGroup") || "null");
+
+  if (!saved || typeof saved !== "object") {
+    selectedMapsByGroup = createDefaultMapSelection();
+    return;
+  }
+
+  const normalized = createDefaultMapSelection();
+
+  Object.keys(MAP_GROUPS).forEach((groupName) => {
+    if (Array.isArray(saved[groupName])) {
+      normalized[groupName] = saved[groupName].filter((mapName) =>
+        MAP_GROUPS[groupName].includes(mapName)
+      );
+    }
+  });
+
+  selectedMapsByGroup = normalized;
+}
+
+function isMapSelected(groupName, mapName) {
+  return (selectedMapsByGroup[groupName] || []).includes(mapName);
+}
+
+function toggleMapSelection(groupName, mapName) {
+  if (!requireAdmin("맵 선택")) return;
+  if (!MAP_GROUPS[groupName] || !MAP_GROUPS[groupName].includes(mapName)) return;
+
+  const current = selectedMapsByGroup[groupName] || [];
   const exists = current.includes(mapName);
 
   if (exists) {
-    selectedMapsByCategory[category] = current.filter((name) => name !== mapName);
+    selectedMapsByGroup[groupName] = current.filter((name) => name !== mapName);
   } else {
-    selectedMapsByCategory[category] = [...current, mapName];
+    selectedMapsByGroup[groupName] = [...current, mapName];
   }
 
   saveMapSelectionState();
-  renderMapSelectionUI();
+  renderMapBoard();
 }
 
-function renderMapSelectionUI() {
-  const tabButtons = document.querySelectorAll("[data-map-category]");
-  tabButtons.forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.mapCategory === selectedMapCategory);
-  });
+function renderMapBoard() {
+  const board = document.getElementById("mapBoard");
+  if (!board) return;
 
-  const categoryLabel = document.getElementById("selectedMapCategoryLabel");
-  if (categoryLabel) {
-    categoryLabel.textContent = `${selectedMapCategory} (${(selectedMapsByCategory[selectedMapCategory] || []).length})`;
-  }
+  board.innerHTML = Object.keys(MAP_GROUPS)
+    .map((groupName) => {
+      const maps = MAP_GROUPS[groupName];
+      const selectedCount = (selectedMapsByGroup[groupName] || []).length;
 
-  const container = document.getElementById("mapSelectionArea");
-  if (!container) return;
-
-  const selectedMaps = selectedMapsByCategory[selectedMapCategory] || [];
-
-  container.innerHTML = MAP_CATEGORIES[selectedMapCategory]
-    .map((mapName) => {
-      const active = selectedMaps.includes(mapName);
       return `
-        <button
-          type="button"
-          class="map-item${active ? " selected" : ""}"
-          onclick="toggleMapSelection('${escapeJs(selectedMapCategory)}','${escapeJs(mapName)}')"
-        >
-          ${escapeHtml(mapName)}
-        </button>
+        <div class="map-group-card">
+          <div class="map-group-header">
+            <span class="map-group-title">${escapeHtml(groupName)}</span>
+            <span class="map-group-count">(${selectedCount})</span>
+          </div>
+          <div class="map-chip-list">
+            ${maps.map((mapName) => {
+              const selected = isMapSelected(groupName, mapName);
+              return `
+                <button
+                  type="button"
+                  class="map-chip${selected ? " selected" : ""}"
+                  onclick="toggleMapSelection('${escapeJs(groupName)}','${escapeJs(mapName)}')"
+                >
+                  ${escapeHtml(mapName)}
+                </button>
+              `;
+            }).join("")}
+          </div>
+        </div>
       `;
     })
     .join("");
 }
 
+function getAvailableMapsFlat() {
+  const result = [];
+
+  Object.keys(selectedMapsByGroup).forEach((groupName) => {
+    (selectedMapsByGroup[groupName] || []).forEach((mapName) => {
+      result.push({ groupName, mapName });
+    });
+  });
+
+  return result;
+}
+
 function drawMap() {
   if (!requireAdmin("맵 추첨")) return;
 
-  const availableMaps = selectedMapsByCategory[selectedMapCategory] || [];
+  const availableMaps = getAvailableMapsFlat();
 
   if (availableMaps.length === 0) {
-    alert("현재 카테고리에서 최소 1개 이상의 맵을 선택해주세요.");
+    alert("최소 1개 이상의 맵을 선택해주세요.");
     return;
   }
 
   const randomIndex = Math.floor(Math.random() * availableMaps.length);
-  const selectedMap = availableMaps[randomIndex];
+  const selected = availableMaps[randomIndex];
 
-  localStorage.setItem("selectedMap", selectedMap);
+  localStorage.setItem("selectedMap", selected.mapName);
 
   const mapMessage = document.getElementById("mapMessage");
   const mapResult = document.getElementById("mapResult");
 
-  if (mapMessage) mapMessage.textContent = `추첨 맵: ${selectedMap}`;
-  if (mapResult) mapResult.textContent = selectedMap;
+  if (mapMessage) {
+    mapMessage.textContent = `추첨 맵: ${selected.mapName}`;
+  }
+
+  if (mapResult) {
+    mapResult.textContent = selected.mapName;
+  }
 }
 
 function copyMap() {
   if (!requireAdmin("맵 복사")) return;
 
-  const sourceText =
+  const text =
     document.getElementById("mapResult")?.textContent?.trim() ||
     document.getElementById("mapMessage")?.textContent?.replace("추첨 맵: ", "").replace(" (복사됨)", "").trim() ||
     "";
 
-  if (!sourceText || sourceText === "-" || sourceText === "맵 추첨 버튼을 눌러주세요.") {
+  if (!text || text === "-" || text === "맵 추첨 버튼을 눌러주세요.") {
     alert("먼저 맵을 추첨해주세요.");
     return;
   }
 
-  navigator.clipboard.writeText(sourceText)
+  navigator.clipboard.writeText(text)
     .then(() => {
       const mapMessage = document.getElementById("mapMessage");
-      if (mapMessage) mapMessage.textContent = `추첨 맵: ${sourceText} (복사됨)`;
+      if (mapMessage) mapMessage.textContent = `추첨 맵: ${text} (복사됨)`;
     })
     .catch(() => {
       const textarea = document.createElement("textarea");
-      textarea.value = sourceText;
+      textarea.value = text;
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand("copy");
       document.body.removeChild(textarea);
 
       const mapMessage = document.getElementById("mapMessage");
-      if (mapMessage) mapMessage.textContent = `추첨 맵: ${sourceText} (복사됨)`;
+      if (mapMessage) mapMessage.textContent = `추첨 맵: ${text} (복사됨)`;
     });
 }
 
 function resetMap() {
   if (!requireAdmin("맵 초기화")) return;
 
-  selectedMapsByCategory = createDefaultMapSelection();
+  selectedMapsByGroup = createDefaultMapSelection();
   saveMapSelectionState();
   localStorage.removeItem("selectedMap");
 
@@ -810,7 +852,7 @@ function resetMap() {
   if (mapMessage) mapMessage.textContent = "맵 추첨 버튼을 눌러주세요.";
   if (mapResult) mapResult.textContent = "-";
 
-  renderMapSelectionUI();
+  renderMapBoard();
 }
 
 function loadSavedMap() {
@@ -818,8 +860,13 @@ function loadSavedMap() {
   const mapMessage = document.getElementById("mapMessage");
   const mapResult = document.getElementById("mapResult");
 
-  if (savedMap && mapMessage) mapMessage.textContent = `추첨 맵: ${savedMap}`;
-  if (savedMap && mapResult) mapResult.textContent = savedMap;
+  if (savedMap && mapMessage) {
+    mapMessage.textContent = `추첨 맵: ${savedMap}`;
+  }
+
+  if (savedMap && mapResult) {
+    mapResult.textContent = savedMap;
+  }
 }
 
 /* =========================
@@ -1720,26 +1767,6 @@ function renderMemberRelationStats() {
 }
 
 /* =========================
-   공통
-========================= */
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function escapeJs(value) {
-  return String(value)
-    .replaceAll("\\", "\\\\")
-    .replaceAll("'", "\\'")
-    .replaceAll('"', '\\"');
-}
-
-/* =========================
    초기화
 ========================= */
 
@@ -1753,7 +1780,7 @@ loadLocks();
 applyTeamModeUI();
 
 loadMapSelectionState();
-renderMapSelectionUI();
+renderMapBoard();
 loadSavedMap();
 
 setDefaultRecordDate();
