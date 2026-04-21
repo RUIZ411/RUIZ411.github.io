@@ -170,18 +170,44 @@
             <div class="side-card">
               <h3 class="side-title">맵 선택</h3>
               <div class="side-desc">
-                카테고리를 선택한 후 맵을 고르거나, 선택 없이 전체를 그대로 추첨할 수 있습니다.
+                체크 해제한 맵은 추첨에서 제외됩니다. 아무 것도 해제하지 않으면 전체 맵에서 그대로 추첨합니다.
               </div>
 
-              <div class="map-category-row">
-                <button type="button" class="map-category-btn active" data-map-category="쟁탈" onclick="selectMapCategory('쟁탈')">쟁탈</button>
-                <button type="button" class="map-category-btn" data-map-category="호위" onclick="selectMapCategory('호위')">호위</button>
-                <button type="button" class="map-category-btn" data-map-category="혼합" onclick="selectMapCategory('혼합')">혼합</button>
-                <button type="button" class="map-category-btn" data-map-category="밀기" onclick="selectMapCategory('밀기')">밀기</button>
-              </div>
+              <div class="map-board">
+                <div class="map-board-grid">
+                  <div class="map-category-card">
+                    <label class="map-category-head">
+                      <input type="checkbox" id="cat-control" onchange="toggleCategorySelection('control')" />
+                      <span>쟁탈</span>
+                    </label>
+                    <div class="map-chip-list" id="mapGroup-control"></div>
+                  </div>
 
-              <div class="selected-map-category" id="selectedMapCategoryLabel">쟁탈 (5)</div>
-              <div id="mapSelectionArea" class="map-selection-area"></div>
+                  <div class="map-category-card">
+                    <label class="map-category-head">
+                      <input type="checkbox" id="cat-escort" onchange="toggleCategorySelection('escort')" />
+                      <span>호위</span>
+                    </label>
+                    <div class="map-chip-list" id="mapGroup-escort"></div>
+                  </div>
+
+                  <div class="map-category-card">
+                    <label class="map-category-head">
+                      <input type="checkbox" id="cat-hybrid" onchange="toggleCategorySelection('hybrid')" />
+                      <span>혼합</span>
+                    </label>
+                    <div class="map-chip-list" id="mapGroup-hybrid"></div>
+                  </div>
+
+                  <div class="map-category-card">
+                    <label class="map-category-head">
+                      <input type="checkbox" id="cat-push" onchange="toggleCategorySelection('push')" />
+                      <span>밀기</span>
+                    </label>
+                    <div class="map-chip-list" id="mapGroup-push"></div>
+                  </div>
+                </div>
+              </div>
 
               <div class="btn-row">
                 <button class="primary" onclick="drawMap()">맵 추첨하기</button>
