@@ -1222,3 +1222,11 @@ body.dark .stats-table th {
     overflow-x: auto;
   }
 }
+.map-chip.mz-map {
+  color: #ff4d4d;
+  font-weight: 900;
+}
+
+.map-chip.selected.mz-map {
+  color: #ff4d4d;
+}
