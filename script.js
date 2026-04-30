@@ -36,7 +36,7 @@ const MIN_RECORD_TEAM_SIZE = 4;
 const MAX_RECORD_TEAM_SIZE = 8;
 const RELATION_BASE_MEMBER = "수힛";
 
-const MAP = {
+const MAP_GROUPS = {
   "쟁탈": ["네팔", "리장 타워", "부산", "오아시스", "일리오스", "남극반도"],
   "호위": ["66번 국도", "지브롤터", "도라도", "쓰레기촌", "리알토", "샴발리", "하바나"],
   "혼합": ["눔바니", "아이헨발데", "왕의 길", "할리우드", "미드타운", "블리자드월드", "파라이수"],
