@@ -44,6 +44,14 @@ const MAP_GROUPS = {
   "플래시포인트": ["뉴 정크시티", "수라바사", "아틀리스"]
 };
 
+const MZ_MAPS = [
+  "남극반도",
+  "리알토", "샴발리", "하바나",
+  "미드타운", "블리자드월드", "파라이수",
+  "뉴 퀸 스트리트", "이스페란사", "콜로세오", "루나시피",
+  "뉴 정크시티", "수라바사", "아틀리스"
+];
+
 let currentTeamMode = TEAM_MODE_5V5;
 let selectedMapsByGroup = createDefaultMapSelection();
 
@@ -768,7 +776,7 @@ function renderMapBoard() {
               return `
                 <button
                   type="button"
-                  class="map-chip${selected ? " selected" : ""}"
+                  class="map-chip${selected ? " selected" : ""}${MZ_MAPS.includes(mapName) ? " mz-map" : ""}"
                   onclick="toggleMapSelection('${escapeJs(groupName)}','${escapeJs(mapName)}')"
                 >
                   ${selected ? "✓ " : ""}${escapeHtml(mapName)}
