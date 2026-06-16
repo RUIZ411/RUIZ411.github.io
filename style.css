@@ -1347,14 +1347,17 @@ body.view-obs.is-reset-bingo .reset-menu-row b {
 
 /* 숫자 빙고 전용: 숫자 가독성 강화 */
 body.is-number-bingo .cell.text-short .cell-text {
-  font-size: 34px;
+  font-size: 46px;
   line-height: 1;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.045em;
   font-weight: 1000;
+  transform: translateY(1px);
 }
 
 body.is-number-bingo.view-obs .cell.text-short .cell-text {
-  font-size: 36px;
+  font-size: 52px;
+  line-height: 1;
+  letter-spacing: -0.055em;
 }
 
 body.is-number-bingo .admin-cell-editor {
