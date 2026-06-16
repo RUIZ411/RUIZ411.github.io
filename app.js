@@ -581,6 +581,13 @@ function getTextLengthClass(value) {
   return "text-xlong";
 }
 
+function getNumberDigitClass(value) {
+  const digits = String(value || "").replace(/\D/g, "").length;
+  if (digits <= 1) return "number-digit-1";
+  if (digits === 2) return "number-digit-2";
+  return "number-digit-3";
+}
+
 function renderAdminLock() {
   const locked = activeView !== "obs" && !isAdmin;
   $$('[data-admin-only]').forEach((item) => {
@@ -625,7 +632,8 @@ function renderBoard() {
 
   currentState.cells.forEach((cell, index) => {
     const cellEl = document.createElement("div");
-    cellEl.className = `cell ${getTextLengthClass(cell.text)}`;
+    const numberDigitClass = currentState.contentType === "number" ? getNumberDigitClass(cell.text) : "";
+    cellEl.className = `cell ${getTextLengthClass(cell.text)} ${numberDigitClass}`.trim();
     cellEl.dataset.index = String(index);
     cellEl.classList.toggle("cleared", Boolean(cell.cleared));
     cellEl.classList.toggle("line-completed", completedCellIndexes.has(index));

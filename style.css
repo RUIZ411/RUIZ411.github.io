@@ -1364,3 +1364,50 @@ body.is-number-bingo .admin-cell-editor {
   font-size: 22px;
   line-height: 1;
 }
+
+
+/* 숫자 빙고 전용: 숫자 자릿수별 박스 채움 */
+body.is-number-bingo .cell .cell-text {
+  display: block;
+  width: 100%;
+  max-height: none;
+  padding: 0 2px;
+  overflow: visible;
+  line-height: .88;
+  letter-spacing: -0.075em;
+  font-weight: 1000;
+  transform: translateY(1px);
+  font-variant-numeric: tabular-nums;
+}
+
+body.is-number-bingo .cell.number-digit-1 .cell-text {
+  font-size: 68px;
+}
+
+body.is-number-bingo .cell.number-digit-2 .cell-text {
+  font-size: 58px;
+}
+
+body.is-number-bingo .cell.number-digit-3 .cell-text {
+  font-size: 48px;
+  letter-spacing: -0.11em;
+}
+
+body.is-number-bingo.view-obs .cell.number-digit-1 .cell-text {
+  font-size: 72px;
+}
+
+body.is-number-bingo.view-obs .cell.number-digit-2 .cell-text {
+  font-size: 62px;
+}
+
+body.is-number-bingo.view-obs .cell.number-digit-3 .cell-text {
+  font-size: 50px;
+  letter-spacing: -0.12em;
+}
+
+body.is-number-bingo .admin-cell-editor {
+  font-size: 28px;
+  line-height: .95;
+  font-weight: 1000;
+}
