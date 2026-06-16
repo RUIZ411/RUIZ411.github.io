@@ -1230,3 +1230,18 @@ body.dark .stats-table th {
 .map-chip.selected.mz-map {
   color: #ff4d4d;
 }
+/* =========================
+   시트지 모음 링크 버튼
+========================= */
+
+.sheet-link-btn {
+  background: linear-gradient(90deg, #eef2ff, #f5f3ff);
+  color: #4c1d95;
+  border: 1px solid rgba(147, 51, 234, 0.22);
+}
+
+body.dark .sheet-link-btn {
+  background: rgba(30, 41, 59, 0.96);
+  color: #f5f3ff;
+  border: 1px solid rgba(168, 85, 247, 0.35);
+}

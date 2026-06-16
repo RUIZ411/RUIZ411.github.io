@@ -28,6 +28,8 @@ const schedulesCollection = collection(db, "schedules");
 const recordsCollection = collection(db, "killRecords");
 
 const ADMIN_CODE = "suweet0305";
+const SHEET_LINKS_URL = "https://docs.google.com/spreadsheets/d/1p3uUIZUkVGLmHxWQor9-oHmqOBYF5hLEKdBlQhxGv1k/edit?gid=1493639246#gid=1493639246";
+
 const TEAM_MODE_5V5 = 10;
 const TEAM_MODE_6V6 = 12;
 const MAX_TEAM_PLAYERS = 12;
@@ -74,6 +76,7 @@ const categoryColors = {
 window.showPage = showPage;
 window.toggleDarkMode = toggleDarkMode;
 window.toggleAdminLock = toggleAdminLock;
+window.openSheetLinks = openSheetLinks;
 window.handleHeroImageUpload = handleHeroImageUpload;
 window.resetHeroImage = resetHeroImage;
 
@@ -142,6 +145,24 @@ function requireAdmin(actionLabel = "이 기능") {
   if (isAdminUnlocked()) return true;
   alert(`${actionLabel}은(는) 관리자 코드가 필요합니다.`);
   return false;
+}
+
+function openSheetLinks() {
+  if (isAdminUnlocked()) {
+    window.open(SHEET_LINKS_URL, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  const code = prompt("시트지 모음은 관리자 코드가 필요합니다.");
+  if (code === null) return;
+
+  if (code === ADMIN_CODE) {
+    localStorage.setItem("adminUnlocked", "true");
+    updateAdminButton();
+    window.open(SHEET_LINKS_URL, "_blank", "noopener,noreferrer");
+  } else {
+    alert("관리자 코드가 올바르지 않습니다.");
+  }
 }
 
 function toggleAdminLock() {
