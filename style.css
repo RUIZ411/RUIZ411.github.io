@@ -1230,8 +1230,9 @@ body.dark .stats-table th {
 .map-chip.selected.mz-map {
   color: #ff4d4d;
 }
+
 /* =========================
-   시트지 모음 링크 버튼
+   시트지 모음 버튼
 ========================= */
 
 .sheet-link-btn {
