@@ -1,409 +1,385 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SUWEET TOOL</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>SUWEET BINGO</title>
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <div class="app">
-    <div id="homePage" class="page active">
-      <div class="card">
-        <div class="top-bar home-top-bar">
-          <button class="secondary sheet-link-btn" onclick="openSheetLinks()">시트지 모음 ↗</button>
-          <button class="secondary" onclick="toggleDarkMode()" id="themeToggleBtn">다크모드</button>
-          <button class="secondary" onclick="toggleAdminLock()" id="adminToggleBtn">관리자 잠금 해제</button>
-        </div>
-
-        <div class="hero-badge">SUWEET TOOL</div>
-
-        <div class="hero-image-wrap">
-          <img
-            id="heroImage"
-            class="hero-image"
-            alt="메인 이미지"
-            src="https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80"
-          />
-        </div>
-
-        <div class="image-upload-row">
-          <label
-            class="mini-glass-btn"
-            for="heroImageInput"
-            onclick="return requireAdmin('이미지 변경')"
-          >이미지 추가</label>
-          <button class="mini-glass-btn" onclick="resetHeroImage()">이미지 초기화</button>
-          <input
-            id="heroImageInput"
-            class="hidden-file-input"
-            type="file"
-            accept="image/*"
-            onchange="handleHeroImageUpload(event)"
-          />
-        </div>
-
-        <h1>메인 페이지</h1>
-        <div class="desc">
-          원하는 메뉴를 눌러 해당 기능으로 이동하세요.<br />
-          팀 섞기, 스케줄, 전적 기록, 전적 상세를 한 번에 관리할 수 있습니다.
-        </div>
-
-        <div class="menu-grid">
-          <button class="menu-btn" onclick="showPage('teamPage')">팀 섞기</button>
-          <button class="menu-btn" onclick="showPage('schedulePage')">스케줄</button>
-          <button class="menu-btn" onclick="showPage('recordPage')">전적 기록</button>
-          <button class="menu-btn" onclick="showPage('detailPage')">전적 상세</button>
+  <div id="app" class="app-shell">
+    <header class="topbar" id="topbar">
+      <div class="brand">
+        <span class="brand-mark">B</span>
+        <div>
+          <p class="eyebrow">SUWEET BINGO</p>
+          <h1 id="pageTitle">오늘의 빙고</h1>
         </div>
       </div>
+
+      <nav class="view-tabs" aria-label="화면 전환">
+        <a href="?view=public" data-view-link="public">메인 화면</a>
+        <a href="?view=obs" data-view-link="obs">송출용</a>
+        <button id="memoOpenBtn" class="memo-open-btn" type="button">📝 메모장</button>
+      </nav>
+    </header>
+
+    <section class="home-screen" id="homeScreen" hidden>
+      <div class="home-hero">
+        <p class="eyebrow">ROOM SELECT</p>
+        <h2>빙고 방 선택</h2>
+        <p>방을 생성하려면 관리자 코드를 입력하고, 생성된 5자리 입장 코드로 방에 접속하세요.</p>
+      </div>
+      <div id="roomCards" class="room-grid" aria-live="polite"></div>
+      <p class="home-help">방 코드는 접속 권한을 구분하기 위한 간편 코드입니다. 코드가 공유되면 같은 방을 조작할 수 있어요.</p>
+    </section>
+
+    <div class="admin-toggle-row" id="adminToggleRow" hidden>
+      <button id="adminToggle" class="admin-toggle" type="button">관리자 패널 접기</button>
     </div>
 
-    <div id="teamPage" class="page">
-      <div class="card">
-        <div class="top-bar">
-          <button class="secondary" onclick="showPage('homePage')">메인으로</button>
+    <main class="layout">
+      <aside class="admin-panel" id="adminPanel" hidden>
+        <section class="panel-card">
+          <div class="panel-head">
+            <h2>방 권한</h2>
+            <span id="loginStatus" class="status-pill">확인 중</span>
+          </div>
+
+          <div id="roomInfoBox" class="login-box room-info-box" hidden>
+            <div class="room-info-line"><span>현재 방</span><strong id="currentRoomName">-</strong></div>
+            <div class="room-info-line"><span>입장 코드</span><strong id="currentRoomCode">-</strong></div>
+            <div class="row-buttons">
+              <button id="copyRoomCodeBtn" class="primary-btn" type="button">코드 복사</button>
+              <button id="leaveRoomBtn" class="ghost-btn" type="button">방 나가기</button>
+            </div>
+            <p class="help-text">이 방에 접속한 뒤에는 기존 빙고 기능을 바로 조작할 수 있어요.</p>
+          </div>
+
+          <div id="firebaseLoginBox" class="login-box" hidden>
+            <label>
+              관리자 아이디
+              <input id="adminEmail" type="text" placeholder="아이디만 입력, 예: 123" autocomplete="username" />
+            </label>
+            <label>
+              비밀번호
+              <input id="adminPassword" type="password" placeholder="Firebase Auth 비밀번호" autocomplete="current-password" />
+            </label>
+            <div class="row-buttons">
+              <button id="loginBtn" class="primary-btn">로그인</button>
+              <button id="logoutBtn" class="ghost-btn">로그아웃</button>
+            </div>
+          </div>
+
+          <div id="localLoginBox" class="login-box" hidden>
+            <label>
+              로컬 관리자 PIN
+              <input id="localPin" type="password" placeholder="기본값 1234" />
+            </label>
+            <div class="row-buttons">
+              <button id="localLoginBtn" class="primary-btn">관리자 열기</button>
+              <button id="localLogoutBtn" class="ghost-btn">잠금</button>
+            </div>
+            <p class="help-text">Firebase 설정 전에는 브라우저 로컬 저장소로만 동작합니다.</p>
+          </div>
+        </section>
+
+        <section class="panel-card admin-only" data-admin-only>
+          <div class="panel-head">
+            <h2>빙고 생성</h2>
+          </div>
+
+          <label>
+            빙고 제목
+            <input id="titleInput" type="text" maxlength="40" />
+          </label>
+
+          <div class="two-col">
+            <label>
+              칸 수
+              <select id="sizeSelect">
+                <option value="5">5 × 5</option>
+                <option value="7">7 × 7</option>
+                <option value="10">10 × 10</option>
+              </select>
+            </label>
+            <label>
+              내용 타입
+              <select id="typeSelect">
+                <option value="mission">미션</option>
+                <option value="number">숫자</option>
+                <option value="alphabet">알파벳</option>
+                <option value="reset">리셋</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="row-buttons wrap">
+            <button id="createBoardBtn" class="primary-btn">빙고판 생성</button>
+            <button id="shuffleBtn" class="ghost-btn">내용 랜덤 섞기</button>
+            <button id="resetChecksBtn" class="ghost-btn danger-soft">체크 초기화</button>
+          </div>
+        </section>
+
+
+
+        <section class="panel-card admin-only number-draw-panel" data-admin-only>
+          <div class="panel-head">
+            <h2>숫자 랜덤 추첨</h2>
+            <span class="draw-preview">🎲 <b id="lastDrawnNumber">-</b></span>
+          </div>
+          <div class="draw-info-grid">
+            <div class="draw-info-box">
+              <span>추첨됨</span>
+              <strong id="drawnCount">0</strong>
+            </div>
+            <div class="draw-info-box">
+              <span>남은 숫자</span>
+              <strong id="remainingDrawCount">100</strong>
+            </div>
+          </div>
+          <div class="row-buttons wrap">
+            <button id="numberDrawBtn" class="primary-btn">1~100 숫자 추첨</button>
+            <button id="resetDrawBtn" class="ghost-btn">추첨 기록 초기화</button>
+          </div>
+          <p id="drawResultText" class="help-text">내용 타입이 숫자일 때 사용할 수 있어요.</p>
+        </section>
+
+
+        <section class="panel-card admin-only bounty-panel" id="bountyPanel" data-admin-only>
+          <div class="panel-head">
+            <h2>현상금 설정</h2>
+            <span class="draw-preview">🎯 <b id="bountyPreview">0</b></span>
+          </div>
+          <div class="bounty-form-grid">
+            <label>
+              대상 칸
+              <input id="bountyNumberInput" type="text" placeholder="예: 25 / A / 미션명" />
+            </label>
+            <label>
+              개수
+              <input id="bountyAmountInput" type="number" min="0" step="1" placeholder="예: 300" />
+            </label>
+          </div>
+          <div class="row-buttons wrap">
+            <button id="bountyAddBtn" class="primary-btn">추가 / 수정</button>
+            <button id="bountyClearBtn" class="ghost-btn">현상금 비우기</button>
+          </div>
+          <div id="bountyList" class="bounty-list" aria-live="polite"></div>
+          <p class="help-text">모든 빙고에서 대상 칸과 같은 내용은 빨간색으로 표시되고, 아래에 현상금 개수가 함께 표시됩니다.</p>
+        </section>
+        <section class="panel-card admin-only edit-mode-panel" id="editModePanel" data-admin-only>
+          <div class="panel-head">
+            <h2>칸 수정 모드</h2>
+            <span id="editModeStatus" class="status-pill">OFF</span>
+          </div>
+          <button id="editModeToggleBtn" class="primary-btn edit-mode-toggle" type="button">수정 모드 켜기</button>
+          <p id="editModeHelp" class="help-text">수정 모드를 켜면 왼쪽 빙고칸을 클릭해서 내용을 직접 바꿀 수 있어요.</p>
+        </section>
+
+
+        <section class="panel-card admin-only" data-admin-only>
+          <div class="panel-head">
+            <h2>치킨 수</h2>
+            <span class="chicken-preview">🍗 <b id="chickenPreview">0</b></span>
+          </div>
+          <div class="counter-control">
+            <button id="chickenMinusBtn" class="ghost-btn">-</button>
+            <input id="chickenInput" type="number" min="0" step="1" value="0" />
+            <button id="chickenPlusBtn" class="ghost-btn">+</button>
+          </div>
+        </section>
+
+        <section class="panel-card admin-only reset-menu-admin" id="resetMenuAdmin" data-admin-only>
+          <div class="panel-head">
+            <h2>리셋 빙고 메뉴판</h2>
+            <span class="status-pill">리셋 전용</span>
+          </div>
+          <div class="reset-reward-grid">
+            <label>
+              한개
+              <input id="resetRewardOne" type="number" min="0" step="1" value="0" />
+            </label>
+            <label>
+              한줄
+              <input id="resetRewardLine" type="number" min="0" step="1" value="0" />
+            </label>
+            <label>
+              전체
+              <input id="resetRewardAll" type="number" min="0" step="1" value="0" />
+            </label>
+          </div>
+          <p class="help-text">리셋 빙고일 때 송출 화면 아래 메뉴판에 표시되는 개수를 설정합니다.</p>
+        </section>
+
+        <section class="panel-card admin-only" data-admin-only>
+          <div class="panel-head">
+            <h2>미션 일괄 입력</h2>
+          </div>
+          <textarea id="bulkText" class="bulk-text" placeholder="한 줄에 하나씩 입력하세요.\n예) 3킬 이상\n예) 수류탄 킬\n예) 차량 폭파"></textarea>
+          <div class="row-buttons wrap">
+            <button id="applyBulkBtn" class="primary-btn">현재 빙고판에 적용</button>
+            <button id="clearBulkBtn" class="ghost-btn">입력칸 비우기</button>
+          </div>
+          <p class="help-text">입력 줄 수가 칸보다 적으면 남은 칸은 기존 내용이 유지됩니다.</p>
+        </section>
+
+        <section class="panel-card admin-only" data-admin-only>
+          <div class="panel-head">
+            <h2>전체 관리</h2>
+          </div>
+          <div class="row-buttons wrap">
+            <button id="hardResetBtn" class="danger-btn">전체 초기화</button>
+          </div>
+          <p class="help-text">빙고판, 치킨 수, 완료 줄을 모두 초기 상태로 되돌립니다.</p>
+        </section>
+      </aside>
+
+      <section class="stage" id="stage">
+        <div class="board-title-block">
+          <p class="board-kicker">TODAY BINGO</p>
+          <h2 id="boardTitle">오늘의 빙고</h2>
         </div>
 
-        <div class="team-layout">
-          <div class="team-left-panel">
-            <h2>팀 섞기</h2>
-
-            <div class="desc team-desc">
-              선택한 인원 모드에 맞춰 플레이어를 입력하세요.<br />
-              입력 순서대로 2명씩 같은 티어로 인식합니다. (1-2 / 3-4 / 5-6 / 7-8 / 9-10 / 11-12)<br />
-              플레이어 2, 4, 6, 8, 10, 12 옆의 🔒 / 🔓 버튼으로 각 페어를 같은 팀으로 고정할 수 있습니다.
-            </div>
-
-            <div class="team-player-grid">
-              <div class="player-row">
-                <input type="text" id="player1" placeholder="플레이어 1" />
-              </div>
-              <div class="player-row player-row-lock">
-                <input type="text" id="player2" placeholder="플레이어 2" />
-                <button type="button" class="lock-btn" id="lock2" data-locked="false" onclick="togglePairLock(2)">🔓</button>
-              </div>
-
-              <div class="player-row">
-                <input type="text" id="player3" placeholder="플레이어 3" />
-              </div>
-              <div class="player-row player-row-lock">
-                <input type="text" id="player4" placeholder="플레이어 4" />
-                <button type="button" class="lock-btn" id="lock4" data-locked="false" onclick="togglePairLock(4)">🔓</button>
-              </div>
-
-              <div class="player-row">
-                <input type="text" id="player5" placeholder="플레이어 5" />
-              </div>
-              <div class="player-row player-row-lock">
-                <input type="text" id="player6" placeholder="플레이어 6" />
-                <button type="button" class="lock-btn" id="lock6" data-locked="false" onclick="togglePairLock(6)">🔓</button>
-              </div>
-
-              <div class="player-row">
-                <input type="text" id="player7" placeholder="플레이어 7" />
-              </div>
-              <div class="player-row player-row-lock">
-                <input type="text" id="player8" placeholder="플레이어 8" />
-                <button type="button" class="lock-btn" id="lock8" data-locked="false" onclick="togglePairLock(8)">🔓</button>
-              </div>
-
-              <div class="player-row">
-                <input type="text" id="player9" placeholder="플레이어 9" />
-              </div>
-              <div class="player-row player-row-lock">
-                <input type="text" id="player10" placeholder="플레이어 10" />
-                <button type="button" class="lock-btn" id="lock10" data-locked="false" onclick="togglePairLock(10)">🔓</button>
-              </div>
-
-              <div class="player-row">
-                <input type="text" id="player11" placeholder="플레이어 11 (선택)" />
-              </div>
-              <div class="player-row player-row-lock">
-                <input type="text" id="player12" placeholder="플레이어 12 (선택)" />
-                <button type="button" class="lock-btn" id="lock12" data-locked="false" onclick="togglePairLock(12)">🔓</button>
-              </div>
-            </div>
-
-            <div class="btn-row">
-              <button class="primary" onclick="shuffleTeams()">팀 섞기</button>
-              <button class="secondary" onclick="copyTeams()">복사</button>
-              <button class="secondary" onclick="resetPlayers()">멤버 초기화</button>
-            </div>
-
-            <div class="teams">
-              <div class="team-box">
-                <div class="team-title">블루</div>
-                <ul id="team1"></ul>
-              </div>
-              <div class="team-box">
-                <div class="team-title">레드</div>
-                <ul id="team2"></ul>
-              </div>
-            </div>
-
-            <div class="message" id="teamMessage">
-              직전 결과와 완전히 같은 줄 없이, 최소 2라인 이상 다르게 섞습니다.
+        <div class="board-wrap" id="boardWrap">
+          <div class="board-canvas" id="boardCanvas">
+            <div id="bingoBoard" class="bingo-board" aria-label="빙고판"></div>
+            <svg id="lineLayer" class="line-layer" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <div id="bingoOverlay" class="bingo-overlay" hidden>
+              <span>BINGO!</span>
             </div>
           </div>
+        </div>
 
-          <div class="team-right-panel">
-            <div class="side-card">
-              <h3 class="side-title">인원 모드 선택</h3>
-              <div class="side-desc">팀 섞기 인원을 선택하세요.</div>
+        <div class="score-strip score-strip-bottom" id="standardScoreStrip">
+          <div class="score-box">
+            <span class="score-label">BINGO</span>
+            <strong id="bingoCount">0</strong>
+          </div>
+          <div class="score-box chicken-box">
+            <span class="score-label">🍗</span>
+            <strong id="chickenCount">0</strong>
+          </div>
+          <div class="score-box small-score" id="maxBingoBox" hidden>
+            <span class="score-label">MAX</span>
+            <strong id="maxBingoCount">12</strong>
+          </div>
+        </div>
 
-              <div class="mode-card-grid">
-                <button type="button" id="mode5Btn" class="mode-card active" onclick="setTeamMode(10)">
-                  <strong>5 vs 5</strong>
-                  <span>총 10명</span>
-                  <span>5명씩 팀 구성</span>
-                </button>
-
-                <button type="button" id="mode6Btn" class="mode-card" onclick="setTeamMode(12)">
-                  <strong>6 vs 6</strong>
-                  <span>총 12명</span>
-                  <span>6명씩 팀 구성</span>
-                </button>
-              </div>
-
-              <div class="message" id="teamModeInfo">현재 5 vs 5 모드입니다. 총 10명을 입력합니다.</div>
+        <div class="reset-score-menu" id="resetScoreMenu" hidden>
+          <div class="reset-score-stack">
+            <div class="score-box reset-score-box">
+              <span class="score-label">BINGO</span>
+              <strong id="resetBingoCount">0</strong>
             </div>
-
-            <div class="side-card">
-              <h3 class="side-title">맵 선택</h3>
-              <div class="side-desc">
-                체크 해제한 맵은 추첨에서 제외됩니다. 아무 것도 해제하지 않으면 전체 맵에서 그대로 추첨합니다.
-              </div>
-
-              <div id="mapBoard" class="map-board"></div>
-
-              <div class="btn-row">
-                <button class="primary" onclick="drawMap()">맵 추첨하기</button>
-                <button class="secondary" onclick="copyMap()">선택 맵 복사</button>
-                <button class="secondary" onclick="resetMap()">선택 초기화</button>
-              </div>
-
-              <div class="message" id="mapMessage">맵 추첨 버튼을 눌러주세요.</div>
-              <div id="mapResult" style="display:none;">-</div>
+            <div class="score-box chicken-box reset-score-box">
+              <span class="score-label">🍗</span>
+              <strong id="resetChickenCount">0</strong>
             </div>
           </div>
+          <div class="reset-menu-board">
+            <div class="reset-menu-row">
+              <span>한개</span>
+              <strong><b id="resetMenuOne">0</b>개</strong>
+            </div>
+            <div class="reset-menu-row">
+              <span>한줄</span>
+              <strong><b id="resetMenuLine">0</b>개</strong>
+            </div>
+            <div class="reset-menu-row">
+              <span>전체</span>
+              <strong><b id="resetMenuAll">0</b>개</strong>
+            </div>
+          </div>
+        </div>
+
+        <div id="cellEditorHelp" class="editor-help" hidden>
+          관리자로 로그인하면 왼쪽 빙고칸을 클릭해서 바로 지움/복구할 수 있어요.
+        </div>
+      </section>
+
+      <aside class="obs-scale-panel" id="obsScalePanel" aria-label="송출용 화면 확대 축소" hidden>
+        <p>OBS 비율</p>
+        <button type="button" data-obs-scale="1">100%</button>
+        <button type="button" data-obs-scale="0.8">80%</button>
+        <button type="button" data-obs-scale="0.67">67%</button>
+        <button type="button" data-obs-scale="0.5">50%</button>
+      </aside>
+    </main>
+  </div>
+
+  <div id="roomGateModal" class="memo-modal room-gate-modal" hidden>
+    <div class="memo-backdrop"></div>
+    <div class="memo-dialog room-gate-dialog" role="dialog" aria-modal="true" aria-labelledby="roomGateTitle">
+      <div class="memo-head">
+        <div>
+          <p class="eyebrow">ROOM CODE</p>
+          <h2 id="roomGateTitle">방 입장 코드</h2>
         </div>
       </div>
-    </div>
-
-    <div id="schedulePage" class="page">
-      <div class="calendar-page">
-        <div class="calendar-top">
-          <div>
-            <div class="calendar-chip">SUWEET CALENDAR</div>
-            <h2 class="calendar-title">캘린더</h2>
-          </div>
-
-          <div class="calendar-actions">
-            <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-            <button class="primary" onclick="openScheduleFormForToday()">일정 등록</button>
-            <div class="calendar-chip" id="hitchaCount">이번달 힛차 0회</div>
-          </div>
-        </div>
-
-        <div class="calendar-nav">
-          <button onclick="changeMonth(-1)">◀</button>
-          <div class="calendar-label" id="calendarLabel">2026년 3월</div>
-          <button onclick="changeMonth(1)">▶</button>
-        </div>
-
-        <div class="calendar-toolbar">
-          <div class="calendar-legend">
-            <span><span class="legend-dot" style="background:#3b82f6"></span>방송</span>
-            <span><span class="legend-dot" style="background:#22c55e"></span>방송예정</span>
-            <span><span class="legend-dot" style="background:#06b6d4"></span>합방</span>
-            <span><span class="legend-dot" style="background:#ef4444"></span>힛차</span>
-            <span><span class="legend-dot" style="background:#a855f7"></span>기타</span>
-          </div>
-          <div class="calendar-chip">날짜를 누르면 해당 날짜로 바로 입력됩니다.</div>
-        </div>
-
-        <div class="calendar-grid">
-          <div class="calendar-weekdays">
-            <div class="weekday">일</div>
-            <div class="weekday">월</div>
-            <div class="weekday">화</div>
-            <div class="weekday">수</div>
-            <div class="weekday">목</div>
-            <div class="weekday">금</div>
-            <div class="weekday">토</div>
-          </div>
-          <div class="calendar-days" id="calendarDays"></div>
-        </div>
-
-        <div class="calendar-panel">
-          <h3>일정 등록 / 수정</h3>
-
-          <div class="event-form">
-            <input type="date" id="scheduleDate" />
-            <input type="time" id="scheduleTime" />
-            <select id="scheduleCategory">
-              <option value="방송">방송</option>
-              <option value="방송예정">방송예정</option>
-              <option value="합방">합방</option>
-              <option value="힛차">힛차</option>
-              <option value="기타">기타</option>
-            </select>
-            <input type="text" id="scheduleText" placeholder="예: 합방 / 개인방송 / 힛차 공지" />
-            <button class="primary" onclick="saveScheduleFromForm()">저장</button>
-            <button class="secondary" onclick="clearScheduleInputs()">초기화</button>
-          </div>
-
-          <div class="event-actions">
-            <button onclick="deleteSelectedSchedule()" class="danger">선택 일정 삭제</button>
-          </div>
-
-          <div class="message" id="scheduleMessage">스케줄은 Firebase에 공유 저장됩니다.</div>
-        </div>
-      </div>
-    </div>
-
-    <div id="recordPage" class="page">
-      <div class="card">
-        <div class="top-bar">
-          <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-        </div>
-
-        <h2>전적 기록</h2>
-        <div class="desc">
-          날짜, 종류, 승패, 팀원/상대팀, 맞밸런스, 순수킬을 Firebase에 공유 저장합니다.
-        </div>
-
-        <div class="record-summary record-summary-5">
-          <div class="summary-box">
-            <span>총 경기 수</span>
-            <strong id="recordTotalGames">0</strong>
-          </div>
-
-          <div class="summary-box">
-            <span>승리 (킬내기 / 종합)</span>
-            <strong id="recordWinBreakdown">0 / 0</strong>
-          </div>
-
-          <div class="summary-box">
-            <span>패배 (킬내기 / 종합)</span>
-            <strong id="recordLossBreakdown">0 / 0</strong>
-          </div>
-
-          <div class="summary-box">
-            <span>킬내기 승률</span>
-            <strong id="recordKillWinRate">0.00%</strong>
-          </div>
-
-          <div class="summary-box">
-            <span>종합 승률</span>
-            <strong id="recordOverallWinRate">0.00%</strong>
-          </div>
-        </div>
-
-        <div class="record-form-grid">
-          <input type="date" id="recordDate" />
-
-          <select id="recordType">
-            <option value="킬내기">킬내기</option>
-            <option value="랜드">랜드</option>
-            <option value="공장">공장</option>
-            <option value="GKL">GKL</option>
-          </select>
-
-          <select id="recordResult">
-            <option value="승리">승리</option>
-            <option value="패배">패배</option>
-          </select>
-
-          <input type="text" id="recordBalance" placeholder="맞밸런스" />
-          <input type="number" id="recordPureKills" placeholder="순수킬 (음수 가능)" step="1" />
-        </div>
-
-        <h3 class="section-subtitle">우리 팀</h3>
-        <div class="record-team-grid">
-          <input type="text" id="myTeam1" placeholder="팀원 1" />
-          <input type="text" id="myTeam2" placeholder="팀원 2" />
-          <input type="text" id="myTeam3" placeholder="팀원 3" />
-          <input type="text" id="myTeam4" placeholder="팀원 4" />
-          <input type="text" id="myTeam5" placeholder="팀원 5" />
-          <input type="text" id="myTeam6" placeholder="팀원 6" />
-          <input type="text" id="myTeam7" placeholder="팀원 7" />
-          <input type="text" id="myTeam8" placeholder="팀원 8" />
-        </div>
-
-        <h3 class="section-subtitle">상대 팀</h3>
-        <div class="record-team-grid">
-          <input type="text" id="enemyTeam1" placeholder="상대팀 1" />
-          <input type="text" id="enemyTeam2" placeholder="상대팀 2" />
-          <input type="text" id="enemyTeam3" placeholder="상대팀 3" />
-          <input type="text" id="enemyTeam4" placeholder="상대팀 4" />
-          <input type="text" id="enemyTeam5" placeholder="상대팀 5" />
-          <input type="text" id="enemyTeam6" placeholder="상대팀 6" />
-          <input type="text" id="enemyTeam7" placeholder="상대팀 7" />
-          <input type="text" id="enemyTeam8" placeholder="상대팀 8" />
-        </div>
-
-        <div class="message record-help">
-          팀원과 상대팀은 각각 4명 이상, 8명 이하로 자유롭게 입력할 수 있습니다.
-        </div>
-
-        <div class="btn-row">
-          <button class="primary" onclick="saveRecord()">저장</button>
-          <button class="secondary" onclick="clearRecordInputs()">초기화</button>
-          <button class="danger" onclick="deleteSelectedRecord()">선택 전적 삭제</button>
-        </div>
-
-        <div class="message" id="recordMessage">전적 정보를 입력하고 저장 버튼을 눌러주세요.</div>
-        <div id="recordList" class="record-list"></div>
-      </div>
-    </div>
-
-    <div id="detailPage" class="page">
-      <div class="card">
-        <div class="top-bar">
-          <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-          <button class="primary" onclick="renderDetailPage()">새로고침</button>
-        </div>
-
-        <h2>전적 상세</h2>
-        <div class="desc">
-          저장된 전적을 기준으로 밸런스별 승률, 이번 달 승률, 펀킬 및 다파전 승률, 야스오 추적기를 보여줍니다.
-        </div>
-
-        <div class="detail-grid">
-          <div class="detail-card">
-            <h3 class="detail-title">밸런스별 승률</h3>
-            <div id="detailBalanceTable"></div>
-          </div>
-
-          <div class="detail-card">
-            <h3 class="detail-title">이번 달 승률</h3>
-            <div id="detailMonthTable"></div>
-          </div>
-
-          <div class="detail-card full-span">
-            <h3 class="detail-title">펀킬 및 다파전 승률</h3>
-            <div id="detailMapTable"></div>
-          </div>
-
-          <div class="detail-card full-span relation-search-card">
-            <h3 class="detail-title small">야스오 추적기</h3>
-            <div class="detail-desc">수힛 기준으로 특정 멤버와 같은 팀 / 적팀 전적을 확인합니다.</div>
-
-            <div class="relation-search-row">
-              <input type="text" id="memberRelationInput" placeholder="비교할 멤버 이름 입력" />
-              <button class="primary" onclick="renderMemberRelationStats()">검색</button>
-              <button class="secondary" onclick="clearMemberRelationStats()">초기화</button>
-            </div>
-
-            <div class="message relation-message" id="memberRelationSummary">비교할 멤버 이름을 입력해 주세요. (수힛 기준)</div>
-            <div id="memberRelationTable"></div>
-          </div>
+      <p id="roomGateMessage" class="room-gate-message">5자리 입장 코드를 입력해 주세요.</p>
+      <input id="roomGateInput" class="cell-edit-input room-gate-input" type="text" inputmode="numeric" maxlength="5" placeholder="예: 48291" autocomplete="off" />
+      <div class="memo-footer">
+        <p class="memo-status">코드가 맞으면 이 방의 빙고판을 조작할 수 있어요.</p>
+        <div class="row-buttons memo-actions">
+          <button id="roomGateHomeBtn" class="ghost-btn" type="button">방 선택으로</button>
+          <button id="roomGateEnterBtn" class="primary-btn" type="button">입장</button>
         </div>
       </div>
     </div>
   </div>
 
-  <script type="module" src="script.js"></script>
+  <div id="memoModal" class="memo-modal" hidden>
+    <div class="memo-backdrop" data-memo-close></div>
+    <div class="memo-dialog" role="dialog" aria-modal="true" aria-labelledby="memoTitle">
+      <div class="memo-head">
+        <div>
+          <p class="eyebrow">MEMO</p>
+          <h2 id="memoTitle">메모장</h2>
+        </div>
+        <button id="memoCloseBtn" class="memo-icon-btn" type="button" aria-label="메모장 닫기">×</button>
+      </div>
+      <textarea id="memoText" class="memo-textarea" placeholder="방송 중 확인할 메모를 적어두세요."></textarea>
+      <div class="memo-footer">
+        <p id="memoSaveStatus" class="memo-status">저장된 메모가 없습니다.</p>
+        <div class="row-buttons memo-actions">
+          <button id="memoClearBtn" class="ghost-btn" type="button">비우기</button>
+          <button id="memoCancelBtn" class="ghost-btn" type="button">닫기</button>
+          <button id="memoSaveBtn" class="primary-btn" type="button">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="cellEditModal" class="memo-modal cell-edit-modal" hidden>
+    <div class="memo-backdrop" data-cell-edit-close></div>
+    <div class="memo-dialog cell-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="cellEditTitle">
+      <div class="memo-head">
+        <div>
+          <p class="eyebrow">CELL EDIT</p>
+          <h2 id="cellEditTitle">빙고칸 수정</h2>
+        </div>
+        <button id="cellEditCloseBtn" class="memo-icon-btn" type="button" aria-label="칸 수정 닫기">×</button>
+      </div>
+      <div class="cell-edit-current">
+        <span>현재 내용</span>
+        <strong id="cellEditCurrent">-</strong>
+      </div>
+      <label class="cell-edit-label">
+        새 내용
+        <input id="cellEditInput" class="cell-edit-input" type="text" autocomplete="off" />
+      </label>
+      <p id="cellEditHelpText" class="help-text">빙고 종류에 맞는 값을 입력해 주세요.</p>
+      <div class="memo-footer">
+        <p class="memo-status">저장하면 메인/송출용 화면에 바로 반영돼요.</p>
+        <div class="row-buttons memo-actions">
+          <button id="cellEditCancelBtn" class="ghost-btn" type="button">취소</button>
+          <button id="cellEditSaveBtn" class="primary-btn" type="button">저장</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
 </body>
 </html>
