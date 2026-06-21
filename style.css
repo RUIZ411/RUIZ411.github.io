@@ -908,16 +908,59 @@ body.dark .summary-box span {
   margin-bottom: 18px;
 }
 
+.record-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 14px 0 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.58);
+}
+
+body.dark .record-filter-row {
+  background: rgba(15,23,42,0.72);
+  border: 1px solid rgba(148,163,184,0.16);
+}
+
+.record-filter-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--muted);
+  margin-right: auto;
+}
+
+body.dark .record-filter-title {
+  color: #cbd5e1;
+}
+
+.record-filter-row select {
+  width: auto;
+  min-width: 150px;
+}
+
+.record-filter-count {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+body.dark .record-filter-count {
+  color: #cbd5e1;
+}
+
 .record-list {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .record-item {
   background: rgba(255,255,255,0.78);
   border: 1px solid var(--line);
   border-radius: 18px;
-  padding: 18px;
+  padding: 14px 16px;
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1002,15 +1045,15 @@ body.dark .record-result-lose {
 
 .record-meta-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1.2fr 0.8fr 0.8fr;
-  gap: 12px;
+  grid-template-columns: minmax(190px, 1fr) minmax(190px, 1fr) minmax(120px, 0.58fr) minmax(110px, 0.52fr);
+  gap: 10px;
 }
 
 .record-block {
   background: rgba(255,255,255,0.55);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px;
+  border-radius: 12px;
+  padding: 11px 12px;
 }
 
 body.dark .record-block {
@@ -1019,10 +1062,10 @@ body.dark .record-block {
 }
 
 .record-block-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   color: var(--muted);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 body.dark .record-block-title {
@@ -1031,12 +1074,13 @@ body.dark .record-block-title {
 
 .record-members {
   display: grid;
-  gap: 6px;
+  gap: 4px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .record-single-value {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
 }
 
@@ -1183,6 +1227,17 @@ body.dark .stats-table th {
 }
 
 @media (max-width: 720px) {
+  .record-filter-title,
+  .record-filter-row select,
+  .record-filter-row button,
+  .record-filter-count {
+    width: 100%;
+  }
+
+  .record-filter-title {
+    margin-right: 0;
+  }
+
   body {
     padding: 14px;
   }

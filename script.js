@@ -104,6 +104,7 @@ window.saveRecord = saveRecord;
 window.clearRecordInputs = clearRecordInputs;
 window.selectRecord = selectRecord;
 window.deleteSelectedRecord = deleteSelectedRecord;
+window.resetRecordFilter = resetRecordFilter;
 
 window.renderDetailPage = renderDetailPage;
 window.renderMemberRelationStats = renderMemberRelationStats;
@@ -1227,7 +1228,7 @@ function fillTeamInputs(prefix, members = []) {
 }
 
 function startRecordSync() {
-  const q = query(recordsCollection, orderBy("createdAt", "desc"));
+  const q = query(recordsCollection, orderBy("date", "desc"));
 
   onSnapshot(
     q,
@@ -1294,6 +1295,48 @@ function renderMembersHtml(members) {
   return members.map((member) => `<div>${escapeHtml(member)}</div>`).join("");
 }
 
+function getRecordTypeFilterValue() {
+  return document.getElementById("recordTypeFilter")?.value || "전체";
+}
+
+function getRecordsByDateOrder() {
+  return [...recordsCache].sort((a, b) => {
+    const dateA = String(a.date || "");
+    const dateB = String(b.date || "");
+    const dateCompare = dateB.localeCompare(dateA);
+
+    if (dateCompare !== 0) return dateCompare;
+
+    return Number(b.createdAt || 0) - Number(a.createdAt || 0);
+  });
+}
+
+function getVisibleRecords() {
+  const selectedType = getRecordTypeFilterValue();
+  const sortedRecords = getRecordsByDateOrder();
+
+  if (selectedType === "전체") {
+    return sortedRecords;
+  }
+
+  return sortedRecords.filter((item) => item.type === selectedType);
+}
+
+function updateRecordFilterCount(visibleCount) {
+  const countEl = document.getElementById("recordFilterCount");
+  if (!countEl) return;
+
+  const selectedType = getRecordTypeFilterValue();
+  const label = selectedType === "전체" ? "전체" : selectedType;
+  countEl.textContent = `${label} ${visibleCount}개 / 총 ${recordsCache.length}개`;
+}
+
+function resetRecordFilter() {
+  const filter = document.getElementById("recordTypeFilter");
+  if (filter) filter.value = "전체";
+  renderRecords();
+}
+
 function renderRecords() {
   const list = document.getElementById("recordList");
   if (!list) return;
@@ -1301,11 +1344,20 @@ function renderRecords() {
   list.innerHTML = "";
 
   if (recordsCache.length === 0) {
+    updateRecordFilterCount(0);
     list.innerHTML = `<div class="message">아직 저장된 전적이 없습니다.</div>`;
     return;
   }
 
-  recordsCache.forEach((item) => {
+  const visibleRecords = getVisibleRecords();
+  updateRecordFilterCount(visibleRecords.length);
+
+  if (visibleRecords.length === 0) {
+    list.innerHTML = `<div class="message">선택한 종류의 전적이 없습니다.</div>`;
+    return;
+  }
+
+  visibleRecords.forEach((item) => {
     const div = document.createElement("div");
     div.className = "record-item" + (selectedRecordId === item.id ? " selected" : "");
     div.onclick = () => selectRecord(item.id);
