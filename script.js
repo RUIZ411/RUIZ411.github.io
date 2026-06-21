@@ -102,6 +102,8 @@ window.requireAdmin = requireAdmin;
 
 window.saveRecord = saveRecord;
 window.clearRecordInputs = clearRecordInputs;
+window.renderRecords = renderRecords;
+window.syncRecordFilterWithInputType = syncRecordFilterWithInputType;
 window.selectRecord = selectRecord;
 window.deleteSelectedRecord = deleteSelectedRecord;
 window.resetRecordFilter = resetRecordFilter;
@@ -1299,6 +1301,20 @@ function getRecordTypeFilterValue() {
   return document.getElementById("recordTypeFilter")?.value || "전체";
 }
 
+function setRecordTypeFilterValue(type) {
+  const filter = document.getElementById("recordTypeFilter");
+  if (!filter) return;
+
+  const normalizedType = ["킬내기", "랜드", "공장", "GKL"].includes(type) ? type : "전체";
+  filter.value = normalizedType;
+}
+
+function syncRecordFilterWithInputType() {
+  const selectedType = document.getElementById("recordType")?.value || "전체";
+  setRecordTypeFilterValue(selectedType);
+  renderRecords();
+}
+
 function getRecordsByDateOrder() {
   return [...recordsCache].sort((a, b) => {
     const dateA = String(a.date || "");
@@ -1514,12 +1530,14 @@ async function saveRecord() {
       createdAt: Date.now()
     });
 
-    const recordMessage = document.getElementById("recordMessage");
-    if (recordMessage) {
-      recordMessage.textContent = "전적을 저장했습니다.";
-    }
+    setRecordTypeFilterValue(type);
 
     clearRecordInputs();
+
+    const recordMessage = document.getElementById("recordMessage");
+    if (recordMessage) {
+      recordMessage.textContent = `${type} 전적을 저장했습니다. 아래 목록은 ${type} 기준으로 표시됩니다.`;
+    }
   } catch (error) {
     console.error(error);
     alert("전적 저장 중 오류가 발생했습니다.");

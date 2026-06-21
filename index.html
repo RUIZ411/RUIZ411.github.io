@@ -303,7 +303,7 @@
         <div class="record-form-grid">
           <input type="date" id="recordDate" />
 
-          <select id="recordType">
+          <select id="recordType" onchange="syncRecordFilterWithInputType()">
             <option value="킬내기">킬내기</option>
             <option value="랜드">랜드</option>
             <option value="공장">공장</option>
