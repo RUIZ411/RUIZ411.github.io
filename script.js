@@ -1,1886 +1,466 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  query,
-  orderBy
-} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCvz6bttOcYmSL7JY2mgljKDfWkKyrvhyg",
-  authDomain: "schedule-74da4.firebaseapp.com",
-  projectId: "schedule-74da4",
-  storageBucket: "schedule-74da4.firebasestorage.app",
-  messagingSenderId: "520094037606",
-  appId: "1:520094037606:web:8f51c2746642a6a7549fa7",
-  measurementId: "G-4NB6BZ5SXG"
+const STORAGE_KEY = "jerrychuDrawBoardGithubV3";
+const PAGE_PARAMS = new URLSearchParams(location.search);
+const IS_BROADCAST_VIEW = PAGE_PARAMS.get("view") === "broadcast";
+const BROADCAST_LAYOUT = PAGE_PARAMS.get("layout") === "mini" ? "mini" : "full";
+const BROADCAST_CHUNK_SIZE = 20;
+const BROADCAST_FAST_POLL_MS = 650;
+const BROADCAST_IDLE_POLL_MS = 1200;
+const BROADCAST_PULSE_POLL_MS = 350;
+const BROADCAST_PULSE_IDLE_MS = 900;
+let broadcastPollTimer = null;
+let broadcastPublishTimer = null;
+let broadcastPublishing = false;
+let broadcastPublishQueued = false;
+let broadcastFastMode = true;
+let broadcastPollRunning = false;
+let broadcastMetaHash = "";
+let broadcastChunkHashes = [];
+let lastBroadcastRevision = "";
+let lastBroadcastResultId = "";
+let broadcastResultTimer = null;
+let operatorResultTimer = null;
+let randomStatusTimer = null;
+let broadcastPulseTimer = null;
+let broadcastPulseRunning = false;
+let lastBroadcastPulseId = "";
+const defaultSettings = {
+  title:"제리츄 뽑기판", subtitle:"오늘의 행운을 뽑아보세요!", total:100, columns:10, loseText:"아쉽습니다!",
+  prizes:[{rank:"1등",prize:"최고 상품",count:1,color:"#72beff"},{rank:"2등",prize:"행운 상품",count:3,color:"#9f8fff"},{rank:"3등",prize:"소소한 상품",count:6,color:"#ff88bf"}],
+  sound:{enabled:true,volume:0.8,operatorEnabled:false,first:true,win:true,lose:true},
+  integration:{enabled:false,execUrl:"",token:"",pollSeconds:5,bjId:"",maxDraws:100,kinds:{BALLOON_GIFTED:true,CHALLENGE_MISSION_GIFTED:true,BATTLE_MISSION_GIFTED:true},ruleMode:"ratio",ratio:{balloons:500,draws:1},ranges:[{min:500,max:999,draws:1},{min:1000,max:1999,draws:3},{min:2000,max:null,draws:7}],exacts:[{count:500,draws:1},{count:1000,draws:3},{count:2000,draws:7}]}
 };
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-const schedulesCollection = collection(db, "schedules");
-const recordsCollection = collection(db, "killRecords");
-
-const ADMIN_CODE = "suweet0305";
-const SHEET_LINKS_URL = "https://docs.google.com/spreadsheets/d/1p3uUIZUkVGLmHxWQor9-oHmqOBYF5hLEKdBlQhxGv1k/edit?gid=1493639246#gid=1493639246";
-const TEAM_MODE_5V5 = 10;
-const TEAM_MODE_6V6 = 12;
-const MAX_TEAM_PLAYERS = 12;
-
-const MIN_RECORD_TEAM_SIZE = 4;
-const MAX_RECORD_TEAM_SIZE = 8;
-const RELATION_BASE_MEMBER = "수힛";
-
-const MAP_GROUPS = {
-  "쟁탈": ["네팔", "리장 타워", "부산", "오아시스", "일리오스", "남극반도"],
-  "호위": ["66번 국도", "지브롤터", "도라도", "쓰레기촌", "리알토", "샴발리", "하바나"],
-  "혼합": ["눔바니", "아이헨발데", "왕의 길", "할리우드", "미드타운", "블리자드월드", "파라이수"],
-  "밀기": ["뉴 퀸 스트리트", "콜로세오", "이스페란사", "루나시피"],
-  "플래시포인트": ["뉴 정크시티", "수라바사", "아틀리스"]
-};
-
-const MZ_MAPS = [
-  "남극반도",
-  "리알토", "샴발리", "하바나",
-  "미드타운", "블리자드월드", "파라이수",
-  "뉴 퀸 스트리트", "이스페란사", "콜로세오", "루나시피",
-  "뉴 정크시티", "수라바사", "아틀리스"
-];
-
-let currentTeamMode = TEAM_MODE_5V5;
-let selectedMapsByGroup = createDefaultMapSelection();
-
-let calendarYear = new Date().getFullYear();
-let calendarMonth = new Date().getMonth();
-let selectedScheduleId = null;
-let schedulesCache = [];
-
-let selectedRecordId = null;
-let recordsCache = [];
-
-const categoryColors = {
-  "방송": "#3b82f6",
-  "방송예정": "#22c55e",
-  "합방": "#06b6d4",
-  "힛차": "#ef4444",
-  "기타": "#a855f7"
-};
-
-window.showPage = showPage;
-window.toggleDarkMode = toggleDarkMode;
-window.toggleAdminLock = toggleAdminLock;
-window.openSheetLinks = openSheetLinks;
-window.handleHeroImageUpload = handleHeroImageUpload;
-window.resetHeroImage = resetHeroImage;
-
-window.shuffleTeams = shuffleTeams;
-window.copyTeams = copyTeams;
-window.resetPlayers = resetPlayers;
-window.setTeamMode = setTeamMode;
-window.togglePairLock = togglePairLock;
-
-window.toggleMapGroup = toggleMapGroup;
-window.toggleMapSelection = toggleMapSelection;
-window.drawMap = drawMap;
-window.copyMap = copyMap;
-window.resetMap = resetMap;
-
-window.openScheduleFormForToday = openScheduleFormForToday;
-window.changeMonth = changeMonth;
-window.selectCalendarDate = selectCalendarDate;
-window.clearScheduleInputs = clearScheduleInputs;
-window.saveScheduleFromForm = saveScheduleFromForm;
-window.editScheduleById = editScheduleById;
-window.deleteSelectedSchedule = deleteSelectedSchedule;
-window.requireAdmin = requireAdmin;
-
-window.saveRecord = saveRecord;
-window.clearRecordInputs = clearRecordInputs;
-window.renderRecords = renderRecords;
-window.syncRecordFilterWithInputType = syncRecordFilterWithInputType;
-window.selectRecord = selectRecord;
-window.deleteSelectedRecord = deleteSelectedRecord;
-window.resetRecordFilter = resetRecordFilter;
-
-window.renderDetailPage = renderDetailPage;
-window.renderMemberRelationStats = renderMemberRelationStats;
-window.clearMemberRelationStats = clearMemberRelationStats;
-
-/* =========================
-   공통
-========================= */
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function escapeJs(value) {
-  return String(value)
-    .replaceAll("\\", "\\\\")
-    .replaceAll("'", "\\'")
-    .replaceAll('"', '\\"');
-}
-
-function isAdminUnlocked() {
-  return localStorage.getItem("adminUnlocked") === "true";
-}
-
-function updateAdminButton() {
-  const btn = document.getElementById("adminToggleBtn");
-  if (btn) {
-    btn.textContent = isAdminUnlocked() ? "관리자 잠금" : "관리자 잠금 해제";
-  }
-}
-
-function requireAdmin(actionLabel = "이 기능") {
-  if (isAdminUnlocked()) return true;
-  alert(`${actionLabel}은(는) 관리자 코드가 필요합니다.`);
-  return false;
-}
-
-function toggleAdminLock() {
-  if (isAdminUnlocked()) {
-    localStorage.setItem("adminUnlocked", "false");
-    updateAdminButton();
-    alert("관리자 잠금이 설정되었습니다.");
-    return;
-  }
-
-  const code = prompt("관리자 코드를 입력하세요.");
-  if (code === null) return;
-
-  if (code === ADMIN_CODE) {
-    localStorage.setItem("adminUnlocked", "true");
-    updateAdminButton();
-    alert("관리자 잠금이 해제되었습니다.");
-  } else {
-    alert("관리자 코드가 올바르지 않습니다.");
-  }
-}
-
-
-function openSheetLinks() {
-  if (isAdminUnlocked()) {
-    window.open(SHEET_LINKS_URL, "_blank", "noopener,noreferrer");
-    return;
-  }
-
-  const code = prompt("시트지 모음은 관리자 코드가 필요합니다.");
-  if (code === null) return;
-
-  if (code === ADMIN_CODE) {
-    localStorage.setItem("adminUnlocked", "true");
-    updateAdminButton();
-    window.open(SHEET_LINKS_URL, "_blank", "noopener,noreferrer");
-  } else {
-    alert("관리자 코드가 올바르지 않습니다.");
-  }
-}
-
-function applySavedTheme() {
-  const savedTheme = localStorage.getItem("themeMode") || "light";
-
-  if (savedTheme === "dark") {
-    document.body.classList.add("dark");
-  } else {
-    document.body.classList.remove("dark");
-  }
-
-  const btn = document.getElementById("themeToggleBtn");
-  if (btn) {
-    btn.textContent = document.body.classList.contains("dark") ? "라이트모드" : "다크모드";
-  }
-}
-
-function toggleDarkMode() {
-  document.body.classList.toggle("dark");
-  const isDark = document.body.classList.contains("dark");
-  localStorage.setItem("themeMode", isDark ? "dark" : "light");
-
-  const btn = document.getElementById("themeToggleBtn");
-  if (btn) {
-    btn.textContent = isDark ? "라이트모드" : "다크모드";
-  }
-}
-
-function showPage(pageId) {
-  document.querySelectorAll(".page").forEach((page) => page.classList.remove("active"));
-
-  const targetPage = document.getElementById(pageId);
-  if (!targetPage) return;
-
-  targetPage.classList.add("active");
-
-  if (pageId === "schedulePage") {
-    renderCalendar();
-  }
-
-  if (pageId === "detailPage") {
-    renderDetailPage();
-  }
-
-  if (pageId === "teamPage") {
-    applyTeamModeUI();
-    renderMapBoard();
-  }
-}
-
-/* =========================
-   메인 이미지
-========================= */
-
-function loadHeroImage() {
-  const savedImage = localStorage.getItem("heroImage");
-  if (savedImage) {
-    const heroImage = document.getElementById("heroImage");
-    if (heroImage) heroImage.src = savedImage;
-  }
-}
-
-function handleHeroImageUpload(event) {
-  if (!requireAdmin("이미지 변경")) {
-    event.target.value = "";
-    return;
-  }
-
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    const result = e.target.result;
-    const heroImage = document.getElementById("heroImage");
-    if (heroImage) heroImage.src = result;
-    localStorage.setItem("heroImage", result);
-  };
-  reader.readAsDataURL(file);
-}
-
-function resetHeroImage() {
-  if (!requireAdmin("이미지 초기화")) return;
-
-  const defaultImage =
-    "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80";
-
-  const heroImage = document.getElementById("heroImage");
-  if (heroImage) heroImage.src = defaultImage;
-  localStorage.removeItem("heroImage");
-
-  const input = document.getElementById("heroImageInput");
-  if (input) input.value = "";
-}
-
-/* =========================
-   팀 섞기
-========================= */
-
-function getTeamInput(index) {
-  return document.getElementById(`player${index}`);
-}
-
-function getLockButton(evenIndex) {
-  return document.getElementById(`lock${evenIndex}`);
-}
-
-function getInputs() {
-  const inputs = [];
-  for (let i = 1; i <= MAX_TEAM_PLAYERS; i++) {
-    const input = getTeamInput(i);
-    if (input) inputs.push(input);
-  }
-  return inputs;
-}
-
-function savePlayers() {
-  const values = [];
-  for (let i = 1; i <= MAX_TEAM_PLAYERS; i++) {
-    const input = getTeamInput(i);
-    values.push(input ? input.value.trim() : "");
-  }
-  localStorage.setItem("players", JSON.stringify(values));
-}
-
-function loadPlayers() {
-  const saved = JSON.parse(localStorage.getItem("players") || "[]");
-
-  for (let i = 1; i <= MAX_TEAM_PLAYERS; i++) {
-    const input = getTeamInput(i);
-    if (!input) continue;
-
-    input.value = saved[i - 1] || "";
-    input.addEventListener("input", savePlayers);
-  }
-}
-
-function saveTeamMode() {
-  localStorage.setItem("teamMode", String(currentTeamMode));
-}
-
-function loadTeamMode() {
-  const saved = Number(localStorage.getItem("teamMode"));
-  if (saved === TEAM_MODE_5V5 || saved === TEAM_MODE_6V6) {
-    currentTeamMode = saved;
-  } else {
-    currentTeamMode = TEAM_MODE_5V5;
-  }
-}
-
-function setLockButtonState(evenIndex, locked) {
-  const btn = getLockButton(evenIndex);
-  if (!btn) return;
-
-  btn.dataset.locked = locked ? "true" : "false";
-  btn.textContent = locked ? "🔒" : "🔓";
-  btn.setAttribute("aria-pressed", locked ? "true" : "false");
-}
-
-function isPairLocked(evenIndex) {
-  const btn = getLockButton(evenIndex);
-  return btn ? btn.dataset.locked === "true" : false;
-}
-
-function saveLocks() {
-  const lockState = {};
-  for (let i = 2; i <= MAX_TEAM_PLAYERS; i += 2) {
-    lockState[i] = isPairLocked(i);
-  }
-  localStorage.setItem("teamPairLocks", JSON.stringify(lockState));
-}
-
-function loadLocks() {
-  const saved = JSON.parse(localStorage.getItem("teamPairLocks") || "{}");
-  for (let i = 2; i <= MAX_TEAM_PLAYERS; i += 2) {
-    setLockButtonState(i, !!saved[i]);
-  }
-}
-
-function togglePairLock(evenIndex) {
-  if (!requireAdmin("팀 고정 설정")) return;
-
-  const btn = getLockButton(evenIndex);
-  if (!btn) return;
-
-  setLockButtonState(evenIndex, !isPairLocked(evenIndex));
-  saveLocks();
-}
-
-function setTeamMode(playerCount) {
-  if (playerCount !== TEAM_MODE_5V5 && playerCount !== TEAM_MODE_6V6) return;
-
-  currentTeamMode = playerCount;
-  saveTeamMode();
-  applyTeamModeUI();
-
-  const teamMessage = document.getElementById("teamMessage");
-  if (teamMessage) {
-    teamMessage.textContent =
-      currentTeamMode === TEAM_MODE_5V5
-        ? "5 vs 5 모드로 설정되었습니다. 플레이어 1~10을 사용합니다."
-        : "6 vs 6 모드로 설정되었습니다. 플레이어 1~12를 사용합니다.";
-  }
-}
-
-function applyTeamModeUI() {
-  const mode5Btn = document.getElementById("mode5Btn");
-  const mode6Btn = document.getElementById("mode6Btn");
-
-  if (mode5Btn) mode5Btn.classList.toggle("active", currentTeamMode === TEAM_MODE_5V5);
-  if (mode6Btn) mode6Btn.classList.toggle("active", currentTeamMode === TEAM_MODE_6V6);
-
-  const is5v5 = currentTeamMode === TEAM_MODE_5V5;
-
-  const player11 = getTeamInput(11);
-  const player12 = getTeamInput(12);
-  const lock12 = getLockButton(12);
-
-  if (player11) {
-    player11.disabled = is5v5;
-    player11.closest(".player-row")?.classList.toggle("disabled", is5v5);
-  }
-
-  if (player12) {
-    player12.disabled = is5v5;
-    player12.closest(".player-row")?.classList.toggle("disabled", is5v5);
-  }
-
-  if (lock12) {
-    lock12.style.display = is5v5 ? "none" : "";
-  }
-
-  const modeInfo = document.getElementById("teamModeInfo");
-  if (modeInfo) {
-    modeInfo.textContent =
-      currentTeamMode === TEAM_MODE_5V5
-        ? "현재 5 vs 5 모드입니다. 총 10명을 입력합니다."
-        : "현재 6 vs 6 모드입니다. 총 12명을 입력합니다.";
-  }
-}
-
-function resetPlayers() {
-  if (!requireAdmin("멤버 초기화")) return;
-  if (!confirm("저장된 멤버와 팀 결과를 초기화할까요?")) return;
-
-  localStorage.removeItem("players");
-  localStorage.removeItem("lastTeams");
-  localStorage.removeItem("teamPairLocks");
-
-  getInputs().forEach((input) => {
-    input.value = "";
-  });
-
-  for (let i = 2; i <= MAX_TEAM_PLAYERS; i += 2) {
-    setLockButtonState(i, false);
-  }
-
-  const team1 = document.getElementById("team1");
-  const team2 = document.getElementById("team2");
-  const teamMessage = document.getElementById("teamMessage");
-
-  if (team1) team1.innerHTML = "";
-  if (team2) team2.innerHTML = "";
-  if (teamMessage) teamMessage.textContent = "멤버와 팀 고정 상태가 초기화되었습니다.";
-
-  savePlayers();
-  saveLocks();
-}
-
-function getPlayers() {
-  const players = [];
-  for (let i = 1; i <= currentTeamMode; i++) {
-    const input = getTeamInput(i);
-    players.push(input ? input.value.trim() : "");
-  }
-  return players;
-}
-
-function validatePlayers(players) {
-  if (players.some((name) => name === "")) {
-    alert(`${currentTeamMode === TEAM_MODE_5V5 ? "5 vs 5" : "6 vs 6"} 모드에 필요한 플레이어를 모두 입력해주세요.`);
-    return false;
-  }
-
-  const uniqueCount = new Set(players).size;
-  if (uniqueCount !== players.length) {
-    alert("중복된 플레이어 이름이 있습니다. 확인해주세요.");
-    return false;
-  }
-
+let state=loadState(); let pendingIndex=null; let pollTimer=null; let syncing=false;
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+function newState(){return{settings:structuredClone(defaultSettings),board:[],history:[],queue:[],importedEventIds:[],session:{active:false,startRow:1,startedAt:"",endedAt:"",sessionId:"",excludedCount:0,lastError:""},broadcast:{key:"",bjId:""},lastResult:null}}
+function normalizeState(saved){const base=newState();return{settings:{...base.settings,...(saved.settings||{}),sound:{...base.settings.sound,...(saved.settings?.sound||{})},integration:{...base.settings.integration,...(saved.settings?.integration||{}),kinds:{...base.settings.integration.kinds,...(saved.settings?.integration?.kinds||{})},ratio:{...base.settings.integration.ratio,...(saved.settings?.integration?.ratio||{})},ranges:saved.settings?.integration?.ranges||base.settings.integration.ranges,exacts:saved.settings?.integration?.exacts||base.settings.integration.exacts}},board:Array.isArray(saved.board)?saved.board:[],history:Array.isArray(saved.history)?saved.history:[],queue:Array.isArray(saved.queue)?saved.queue:[],importedEventIds:Array.isArray(saved.importedEventIds)?saved.importedEventIds:[],session:{...base.session,...(saved.session||{})},broadcast:{...base.broadcast,...(saved.broadcast||{})},lastResult:saved.lastResult||null}}
+function loadState(){try{const saved=JSON.parse(localStorage.getItem(STORAGE_KEY));return saved?normalizeState(saved):newState()}catch{return newState()}}
+function saveState(){if(!IS_BROADCAST_VIEW)localStorage.setItem(STORAGE_KEY,JSON.stringify(state));if(!IS_BROADCAST_VIEW)scheduleBroadcastPublish()}
+function esc(v=""){return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;")}
+function formatNumber(n){return String(n)}
+function shuffle(a){const c=[...a];for(let i=c.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[c[i],c[j]]=[c[j],c[i]]}return c}
+function currentTarget(){return state.queue.find(q=>q.remaining>0)||null}
+function buildBoard(){const s=state.settings,items=[];s.prizes.forEach((p,pi)=>{for(let i=0;i<Number(p.count);i++)items.push({type:"win",prizeIndex:pi,rank:p.rank,prize:p.prize,color:p.color,opened:false,openedAt:null,participant:""})});const loseCount=Math.max(0,Number(s.total)-items.length);for(let i=0;i<loseCount;i++)items.push({type:"lose",rank:"꽝",prize:s.loseText,color:"#9ba7b8",opened:false,openedAt:null,participant:""});state.board=shuffle(items);state.history=[];saveState();renderAll()}
+function renderAll(){renderHeader();renderPrizeList();renderBoard();renderHistory();renderQueue();renderSession();renderSyncStatus();renderBroadcastTopbar();renderBroadcastPrizeStrip();renderBroadcastSidePanel();renderRandomControls()}
+function renderHeader(){const total=state.board.length||Number(state.settings.total)||0,opened=state.board.filter(x=>x.opened).length,remaining=state.board.length?total-opened:0,wins=state.board.filter(x=>x.type==="win"&&!x.opened).length,progress=total?Math.round(opened/total*100):0;$("#displayTitle").textContent=state.settings.title;$("#displaySubtitle").textContent=state.settings.subtitle;$("#totalCount").textContent=total;$("#remainingCount").textContent=remaining;$("#winningRemaining").textContent=wins;$("#progressText").textContent=`${progress}%`;$("#progressBar").style.width=`${progress}%`;document.title=state.settings.title}
+function renderPrizeList(){const list=$("#prizeList");list.innerHTML="";state.settings.prizes.forEach((p,i)=>{const total=Number(p.count)||0,opened=state.board.filter(x=>x.opened&&x.type==="win"&&x.prizeIndex===i).length,remaining=state.board.length?Math.max(0,total-opened):total;const el=document.createElement("div");el.className="prize-item";el.innerHTML=`<div class="prize-rank" style="--rank-color:${esc(p.color)}">${esc(p.rank)}</div><div class="prize-info"><strong>${esc(p.prize)}</strong><span>총 ${total}개</span></div><div class="prize-count">${remaining}개</div>`;list.appendChild(el)});const wt=state.settings.prizes.reduce((a,p)=>a+(Number(p.count)||0),0),lt=Math.max(0,state.settings.total-wt),lo=state.board.filter(x=>x.opened&&x.type==="lose").length,lr=state.board.length?Math.max(0,lt-lo):lt;list.insertAdjacentHTML("beforeend",`<div class="prize-item lose-summary"><div class="prize-rank" style="--rank-color:#9ba7b8">꽝</div><div class="prize-info"><strong>${esc(state.settings.loseText)}</strong><span>나머지 칸 자동 배치</span></div><div class="prize-count">${lr}개</div></div>`)}
+function renderBoard(){const b=$("#drawBoard"),e=$("#boardEmpty");b.innerHTML="";if(!state.board.length){b.classList.add("hidden");e.classList.remove("hidden");return}b.classList.remove("hidden");e.classList.add("hidden");const columns=Math.max(1,Number(state.settings.columns)||10),rows=Math.max(1,Math.ceil(state.board.length/columns));b.style.setProperty("--board-columns",columns);b.style.setProperty("--board-rows",rows);state.board.forEach((item,i)=>{const btn=document.createElement("button");btn.className="draw-tile";if(item.opened){btn.classList.add("opened");btn.disabled=true;btn.style.setProperty("--tile-color",item.color||"#72beff");if(item.type==="lose")btn.classList.add("lose");const openedLabel=IS_BROADCAST_VIEW?esc(item.rank||(item.type==="lose"?"꽝":"당첨")):(item.type==="win"?`${esc(item.rank)}<br>${esc(item.prize)}`:esc(item.prize));btn.innerHTML=`<span class="tile-number">${openedLabel}</span>`}else{btn.innerHTML=`<span class="tile-number">${formatNumber(i+1)}</span>`;if(!IS_BROADCAST_VIEW)btn.addEventListener("click",()=>drawDirect(i));else btn.disabled=true}b.appendChild(btn)})}
+function renderRandomControls(){const remaining=state.board.filter(x=>!x.opened).length;[["#randomDraw1Btn",1],["#randomDraw5Btn",5],["#randomDraw11Btn",11]].forEach(([selector,count])=>{const btn=$(selector);if(!btn)return;btn.disabled=!state.board.length||remaining<1;btn.title=remaining<count?`남은 ${remaining}개만 추첨됩니다.`:`남은 칸에서 ${count}개를 랜덤 추첨합니다.`})}
+function renderHistory(){const h=$("#recentHistory");if(!state.history.length){h.innerHTML=`<div class="empty-state">아직 뽑기 기록이 없어요.</div>`;return}h.innerHTML=state.history.slice().reverse().slice(0,20).map(x=>`<div class="history-item"><strong>${esc(x.participant)} · ${esc(x.result)}</strong><span>${esc(x.number)}번 · ${esc(x.time)}</span></div>`).join("")}
+function renderQueue(){state.queue=state.queue.filter(q=>q.remaining>0);const cur=currentTarget(),card=$("#currentTargetCard"),actions=$("#currentTargetActions"),list=$("#drawQueueList");$("#queueCountBadge").textContent=`${state.queue.length}명`;if(cur){card.classList.remove("empty-target");card.innerHTML=`<div class="target-avatar"><img src="assets/mascot-character.png" alt="캐릭터"></div><div class="target-info"><span>${cur.source==="soop"?`별풍선 ${Number(cur.balloonCount||0).toLocaleString()}개`:"수동 등록"}</span><strong>${esc(cur.nickname)} · 남은 ${cur.remaining}회</strong><small>${esc(cur.memo||cur.kindLabel||"번호를 선택하면 자동으로 1회 차감됩니다.")}</small></div>`;actions.classList.remove("hidden");$("#participantName").value=cur.nickname}else{card.classList.add("empty-target");card.innerHTML=`<div class="target-avatar"><img src="assets/mascot-character.png" alt="캐릭터"></div><div class="target-info"><span>대기 중</span><strong>등록된 뽑기 대상이 없습니다.</strong><small>직접 이름을 입력하거나 SOOP 연동으로 불러오세요.</small></div>`;actions.classList.add("hidden")}
+if(!state.queue.length){list.innerHTML=`<div class="empty-state">대기 중인 후원이 없습니다.</div>`}else list.innerHTML=state.queue.map((q,i)=>`<div class="queue-item ${i===0?"active":""}"><div class="queue-index">${i+1}</div><div class="queue-name"><strong>${esc(q.nickname)}</strong><span>${q.source==="soop"?`${Number(q.balloonCount||0).toLocaleString()}개 · ${esc(q.kindLabel||"")}`:esc(q.memo||"수동 등록")}</span></div><div class="queue-draws">${q.remaining}회</div></div>`).join("");saveState()}
+function openConfirm(i){drawDirect(i)}
+function getDrawParticipant(){return $("#participantName")?.value.trim()||"이름 없음"}
+function applyDrawAtIndex(i,name){const item=state.board[i];if(!item||item.opened)return null;item.opened=true;item.openedAt=new Date().toISOString();item.participant=name;const time=new Intl.DateTimeFormat("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date());state.history.push({number:formatNumber(i+1),participant:name,result:item.type==="win"?`${item.rank} · ${item.prize}`:item.prize,type:item.type,time});return{item,index:i,result:{id:crypto.randomUUID(),at:new Date().toISOString(),index:i,participant:name,type:item.type,prizeIndex:item.prizeIndex,rank:item.rank,prize:item.prize,color:item.color}}}
+function getBestDrawEntry(entries){const wins=entries.filter(x=>x.item.type==="win");if(!wins.length)return entries[entries.length-1]||null;return wins.slice().sort((a,b)=>(Number(a.item.prizeIndex)||0)-(Number(b.item.prizeIndex)||0))[0]}
+function scheduleOperatorResultClose(ms=650){clearTimeout(operatorResultTimer);operatorResultTimer=setTimeout(()=>closeModal("resultModal"),Math.max(250,ms))}
+function drawDirect(i){const name=getDrawParticipant(),entry=applyDrawAtIndex(i,name);if(!entry)return;state.lastResult=entry.result;publishBroadcastPulse(state.lastResult);saveState();scheduleBroadcastPublish(true);renderAll();showResult(entry.item,entry.index,name);scheduleOperatorResultClose(650)}
+function performDraw(){if(pendingIndex===null)return;const i=pendingIndex;pendingIndex=null;closeModal("confirmModal");drawDirect(i)}
+function setRandomDrawStatus(message){const el=$("#randomDrawStatus");if(!el)return;clearTimeout(randomStatusTimer);el.textContent=message;el.classList.add("show");randomStatusTimer=setTimeout(()=>{el.classList.remove("show");el.textContent=""},1800)}
+function randomDraw(count){if(!state.board.length){setRandomDrawStatus("먼저 뽑기판을 만들어 주세요.");return}const unopened=state.board.map((x,i)=>x.opened?null:i).filter(i=>i!==null);if(!unopened.length){setRandomDrawStatus("남은 번호가 없습니다.");return}const selected=shuffle(unopened).slice(0,Math.min(Math.max(1,Number(count)||1),unopened.length));const name=getDrawParticipant(),entries=selected.map(i=>applyDrawAtIndex(i,name)).filter(Boolean);if(!entries.length)return;const highlight=getBestDrawEntry(entries);const batchResults=entries.map(entry=>({index:entry.index,number:formatNumber(entry.index+1),type:entry.item.type,prizeIndex:entry.item.prizeIndex,rank:entry.item.rank,prize:entry.item.prize,color:entry.item.color,participant:name}));state.lastResult={...highlight.result,batchCount:entries.length,batchResults};publishBroadcastPulse(state.lastResult);saveState();scheduleBroadcastPublish(true);renderAll();const wins=entries.filter(x=>x.item.type==="win").length,loses=entries.length-wins;if(entries.length===1){showResult(highlight.item,highlight.index,name);scheduleOperatorResultClose(650)}else{playResultSound(highlight.item);setRandomDrawStatus(`${entries.length}개 추첨 완료 · 당첨 ${wins}개 / 꽝 ${loses}개`)}}
+const SOUND_PATHS={first:"assets/sounds/first-prize.wav",win:"assets/sounds/win.wav",lose:"assets/sounds/lose.wav"};
+const soundPlayers=Object.create(null);
+function getSoundPlayer(key){if(!SOUND_PATHS[key])return null;if(!soundPlayers[key]){const audio=new Audio(SOUND_PATHS[key]);audio.preload="auto";soundPlayers[key]=audio}return soundPlayers[key]}
+function preloadSoundEffects(){Object.keys(SOUND_PATHS).forEach(getSoundPlayer)}
+function isFirstPrizeResult(item){if(item.type!=="win")return false;if(Number(item.prizeIndex)===0)return true;const first=state.settings.prizes?.[0];return Boolean(first&&String(item.rank||"")===String(first.rank||""))}
+function playSoundEffect(key,force=false){const cfg={...defaultSettings.sound,...(state.settings.sound||{})};if(force&&$("#soundVolume"))cfg.volume=Math.max(0,Math.min(1,(Number($("#soundVolume").value)||0)/100));if(!force){if(!cfg.enabled)return;if(!IS_BROADCAST_VIEW&&!cfg.operatorEnabled)return;if(cfg[key]===false)return}const audio=getSoundPlayer(key);if(!audio)return;try{audio.pause();audio.currentTime=0;audio.volume=Math.max(0,Math.min(1,Number(cfg.volume)||0));const promise=audio.play();if(promise&&typeof promise.catch==="function")promise.catch(err=>console.warn("효과음 자동 재생이 차단되었습니다.",err))}catch(err){console.warn("효과음 재생 실패",err)}}
+function playResultSound(item){if(item.type==="lose")playSoundEffect("lose");else if(isFirstPrizeResult(item))playSoundEffect("first");else playSoundEffect("win")}
+function updateSoundVolumeLabel(){const value=Math.max(0,Math.min(100,Number($("#soundVolume")?.value)||0));const label=$("#soundVolumeValue");if(label)label.textContent=`${value}%`}
+function setSoundTestStatus(message,isError=false){const el=$("#soundTestStatus");if(!el)return;el.textContent=message;el.className=`sound-test-status${isError?" error":" ok"}`}
+function testSoundEffect(key){try{playSoundEffect(key,true);setSoundTestStatus(`${key==="first"?"1등":key==="win"?"일반 당첨":"꽝"} 효과음을 재생했습니다.`)}catch(e){setSoundTestStatus(`효과음 재생 실패: ${e.message}`,true)}}
+function getDraftSoundSettings(){return{enabled:$("#soundEnabled")?.checked!==false,volume:Math.max(0,Math.min(1,(Number($("#soundVolume")?.value)||0)/100)),operatorEnabled:Boolean($("#soundOperatorEnabled")?.checked),first:$("#soundFirstEnabled")?.checked!==false,win:$("#soundWinEnabled")?.checked!==false,lose:$("#soundLoseEnabled")?.checked!==false}}
+function showResult(item,i,name){const c=$("#resultModalCard");c.classList.toggle("lose-result",item.type==="lose");if(item.type==="win"){$("#resultEmoji").textContent=isFirstPrizeResult(item)?"🎉":"✨";$("#resultRank").textContent=item.rank;$("#resultRank").style.background=item.color||"#9f8fff";$("#resultPrize").textContent=item.prize;$("#resultMessage").textContent=isFirstPrizeResult(item)?"대박입니다!":"축하합니다!"}else{$("#resultEmoji").textContent="💫";$("#resultRank").textContent="꽝";$("#resultRank").style.background="#9ba7b8";$("#resultPrize").textContent=item.prize;$("#resultMessage").textContent="다음 기회에는 꼭 당첨될 거예요!"}$("#resultMeta").textContent=`${name} · ${formatNumber(i+1)}번`;playResultSound(item);openModal("resultModal")}
+function showBatchResultSummary(result){
+  const results=Array.isArray(result?.batchResults)?result.batchResults:[];
+  if(results.length<2)return false;
+  const wins=results.filter(x=>x.type==="win").length,loses=results.length-wins;
+  $("#batchResultTitle").textContent=`랜덤 ${results.length}개 추첨 결과`;
+  $("#batchResultSummary").textContent=`당첨 ${wins}개 · 꽝 ${loses}개`;
+  $("#batchResultGrid").innerHTML=results.map(x=>`<div class="batch-result-item ${x.type==="win"?"win":"lose"}" style="--batch-color:${esc(x.color||"#9ba7b8")}"><span class="batch-number">${esc(x.number||formatNumber((Number(x.index)||0)+1))}번</span><strong>${x.type==="win"?esc(x.rank||"당첨"):"꽝"}</strong><small>${esc(x.prize||"")}</small></div>`).join("");
+  const best=results.find(x=>x.type==="win")||results[0];
+  playResultSound({type:best.type,prizeIndex:best.prizeIndex,rank:best.rank,prize:best.prize,color:best.color});
+  openModal("batchResultModal");
+  clearTimeout(broadcastResultTimer);
+  broadcastResultTimer=setTimeout(()=>closeModal("batchResultModal"),3000);
   return true;
 }
-
-function buildPairData() {
-  const pairs = [];
-
-  for (let i = 1; i <= currentTeamMode; i += 2) {
-    const a = getTeamInput(i)?.value.trim() || "";
-    const b = getTeamInput(i + 1)?.value.trim() || "";
-
-    pairs.push({
-      oddIndex: i,
-      evenIndex: i + 1,
-      a,
-      b,
-      locked: isPairLocked(i + 1)
-    });
-  }
-
-  return pairs;
-}
-
-function shuffleArray(array) {
-  const arr = [...array];
-
-  for (let i = arr.length - 1; i > 0; i--) {
-    const randomIndex = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[randomIndex]] = [arr[randomIndex], arr[i]];
-  }
-
-  return arr;
-}
-
-function makeTeamsFromPairs() {
-  const pairs = buildPairData();
-
-  const lockedPairs = pairs.filter((pair) => pair.locked);
-  const unlockedPairs = pairs.filter((pair) => !pair.locked);
-
-  if (lockedPairs.length % 2 !== 0) {
-    return {
-      error: "팀 고정된 페어 수가 홀수입니다. 팀 고정 페어 수를 짝수로 맞춰주세요."
-    };
-  }
-
-  const shuffledLocked = shuffleArray(lockedPairs);
-  const shuffledUnlocked = shuffleArray(unlockedPairs);
-
-  const team1 = [];
-  const team2 = [];
-
-  const lockedPerTeam = lockedPairs.length / 2;
-
-  shuffledLocked.forEach((pair, index) => {
-    const target = index < lockedPerTeam ? team1 : team2;
-    target.push(pair.a, pair.b);
-  });
-
-  shuffledUnlocked.forEach((pair) => {
-    if (Math.random() < 0.5) {
-      team1.push(pair.a);
-      team2.push(pair.b);
-    } else {
-      team1.push(pair.b);
-      team2.push(pair.a);
+function addQueueEntry({nickname,draws,source="manual",balloonCount=0,eventId="",kind="MANUAL",memo=""}){draws=Math.max(0,Math.floor(Number(draws)||0));if(!nickname||draws<1)return false;if(eventId&&(state.importedEventIds.includes(eventId)||state.queue.some(q=>q.eventId===eventId)))return false;state.queue.push({id:crypto.randomUUID(),nickname,remaining:draws,total:draws,used:0,source,balloonCount,eventId,kind,kindLabel:kindToLabel(kind),memo,createdAt:new Date().toISOString()});if(eventId){state.importedEventIds.push(eventId);state.importedEventIds=state.importedEventIds.slice(-3000)}saveState();renderQueue();return true}
+function kindToLabel(k){return({BALLOON_GIFTED:"일반 후원",CHALLENGE_MISSION_GIFTED:"도전미션",BATTLE_MISSION_GIFTED:"배틀미션",MANUAL:"수동"})[k]||k||"후원"}
+function calculateDraws(count,settings=state.settings.integration){count=Math.max(0,Number(count)||0);let n=0;if(settings.ruleMode==="ratio"){const b=Math.max(1,Number(settings.ratio.balloons)||1),d=Math.max(0,Number(settings.ratio.draws)||0);n=Math.floor(count/b)*d}else if(settings.ruleMode==="range"){const r=(settings.ranges||[]).find(x=>count>=Number(x.min||0)&&(x.max===null||x.max===""||count<=Number(x.max)));n=r?Number(r.draws)||0:0}else{const r=(settings.exacts||[]).find(x=>count===Number(x.count));n=r?Number(r.draws)||0:0}return Math.max(0,Math.min(Number(settings.maxDraws)||999,Math.floor(n)))}
+function eventAllowed(ev,s=state.settings.integration){if(s.bjId&&String(ev.bjId||"").toLowerCase()!==String(s.bjId).toLowerCase())return false;return s.kinds?.[ev.kind]!==false}
+function formatSessionDate(value){if(!value)return"-";const d=new Date(value);if(Number.isNaN(d.getTime()))return"-";return new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit"}).format(d)}
+function renderSession(){const s=state.session||{},dot=$("#sessionStatusDot"),title=$("#sessionStatusTitle"),desc=$("#sessionStatusDescription"),started=$("#sessionStartedAt"),base=$("#sessionBaseRow"),startBtn=$("#startSessionBtn"),endBtn=$("#endSessionBtn");dot.className="session-status-dot ";if(s.active){dot.classList.add("active");title.textContent="뽑기 진행 중 · 새 후원 수신 중";desc.textContent="시작 버튼을 누른 시점 이후에 저장된 후원만 대기열에 자동 등록됩니다.";started.textContent=`시작 시각: ${formatSessionDate(s.startedAt)}`;base.textContent=`수신 기준 행: ${Number(s.startRow)||1} 이후`;startBtn.disabled=true;endBtn.disabled=false}else if(s.endedAt){dot.classList.add("ended");title.textContent="후원 수신 종료";desc.textContent="새 후원 수신은 중지되었습니다. 이미 등록된 대기열은 계속 뽑을 수 있습니다.";started.textContent=`최근 시작: ${formatSessionDate(s.startedAt)}`;base.textContent=`종료 시각: ${formatSessionDate(s.endedAt)}`;startBtn.disabled=false;endBtn.disabled=true}else{dot.classList.add("standby");title.textContent="뽑기 시작 대기";desc.textContent="뽑기판을 만든 뒤 시작 버튼을 누르면, 그 시점 이전 후원은 제외되고 이후 후원만 읽어옵니다.";started.textContent="시작 시각: -";base.textContent="수신 기준: -";startBtn.disabled=false;endBtn.disabled=true}const syncBtn=$("#syncNowBtn");if(syncBtn)syncBtn.disabled=!s.active}
+function renderSyncStatus(mode){const s=state.settings.integration,session=state.session||{},d=$("#syncStatusDot"),t=$("#syncStatusText");d.className="status-dot ";if(!s.enabled){d.classList.add("off");t.textContent="사용 안 함";return}if(!session.active){d.classList.add("off");t.textContent="시작 대기";return}if(mode==="syncing"||syncing){d.classList.add("syncing");t.textContent="확인 중"}else if(mode==="error"){d.classList.add("error");t.textContent="연결 오류"}else{d.classList.add("ok");t.textContent="후원 수신 중"}}
+function apiUrl(action,extra={}){const base=state.settings.integration.execUrl.trim();if(!base)return"";const u=new URL(base);u.searchParams.set("action",action);u.searchParams.set("token",state.settings.integration.token||"");Object.entries(extra).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=="")u.searchParams.set(k,v)});u.searchParams.set("_",Date.now());return u.toString()}
+async function fetchJson(url){const r=await fetch(url,{method:"GET",cache:"no-store",redirect:"follow"});if(!r.ok)throw new Error(`HTTP ${r.status}`);const text=await r.text();try{return JSON.parse(text)}catch{throw new Error("JSON 응답이 아닙니다.")}}
+async function postFormJson(url,fields){const body=new URLSearchParams();Object.entries(fields||{}).forEach(([k,v])=>{if(v!==undefined&&v!==null)body.set(k,String(v))});const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},body:body.toString(),cache:"no-store",redirect:"follow"});if(!r.ok)throw new Error(`HTTP ${r.status}`);const text=await r.text();try{return JSON.parse(text)}catch{throw new Error("JSON 응답이 아닙니다.")}}
+function isUnsupportedActionResponse(data){return Boolean(data&&data.ok===false&&String(data.message||"").includes("지원하지 않는 action"))}
+async function testConnection(useDraft=true){const el=$("#connectionTestResult");try{if(useDraft){const draft=getDraftIntegration();if(!draft.execUrl)throw new Error("Apps Script 주소를 입력해 주세요.");const u=new URL(draft.execUrl);u.searchParams.set("action","drawPing");u.searchParams.set("token",draft.token||"");u.searchParams.set("bjId",draft.bjId||"");u.searchParams.set("_",Date.now());el.textContent="연결 확인 중...";el.className="connection-result";const data=await fetchJson(u.toString());if(!data.ok)throw new Error(data.message||"연결 실패")}else{const data=await fetchJson(apiUrl("drawPing"));if(!data.ok)throw new Error(data.message||"연결 실패")}el.textContent="Apps Script 연결 확인 완료";el.className="connection-result ok";return true}catch(e){el.textContent=`연결 실패: ${e.message}`;el.className="connection-result error";return false}}
+async function syncGifts(){const s=state.settings.integration,session=state.session||{};if(syncing||!s.enabled||!s.execUrl||!session.active)return;syncing=true;renderSyncStatus("syncing");try{const data=await fetchJson(apiUrl("drawEvents",{bjId:s.bjId||"",afterRow:Number(session.startRow)||1,sessionId:session.sessionId||""}));if(!data.ok)throw new Error(data.message||"수신 실패");for(const ev of (data.events||[])){const eventId=String(ev.eventId||"");if(!eventId)continue;if(state.importedEventIds.includes(eventId)){await acknowledgeEvent(eventId,"queued");continue}if(!eventAllowed(ev,s)){await acknowledgeEvent(eventId,"ignored");state.importedEventIds.push(eventId);continue}const draws=calculateDraws(ev.count,s);if(draws>0){addQueueEntry({nickname:ev.nickname||ev.userId||"익명",draws,source:"soop",balloonCount:ev.count,eventId,kind:ev.kind,memo:`${kindToLabel(ev.kind)} · 자동 지급 ${draws}회`})}else{state.importedEventIds.push(eventId)}await acknowledgeEvent(eventId,draws>0?"queued":"no_draw")}state.importedEventIds=[...new Set(state.importedEventIds)].slice(-3000);state.session.lastError="";saveState();renderAll();renderSyncStatus()}catch(e){console.error(e);state.session.lastError=e.message||String(e);saveState();renderSyncStatus("error")}finally{syncing=false}}
+async function acknowledgeEvent(eventId,status){try{const d=await fetchJson(apiUrl("drawAck",{eventId,status}));return d.ok}catch{return false}}
+function restartPolling(){clearInterval(pollTimer);pollTimer=null;if(state.settings.integration.enabled&&state.session?.active){const sec=Math.max(3,Number(state.settings.integration.pollSeconds)||5);pollTimer=setInterval(syncGifts,sec*1000);setTimeout(syncGifts,400)}}
+async function startDrawSession(){const integration=state.settings.integration;if(state.session?.active)return;if(!state.board.length){alert("먼저 관리 설정에서 새 뽑기판을 생성해 주세요.");return}if(!integration.enabled){alert("관리 설정 → SOOP 연동에서 자동 연동을 켜고 저장해 주세요.");return}if(!integration.execUrl||!integration.token){alert("Apps Script 주소와 연동 토큰을 먼저 저장해 주세요.");return}if(state.queue.length&&!confirm(`현재 대기열 ${state.queue.length}명을 비우고 새 뽑기를 시작할까요?`))return;const btn=$("#startSessionBtn");btn.disabled=true;btn.textContent="시작 준비 중...";try{const data=await fetchJson(apiUrl("drawStart",{bjId:integration.bjId||""}));if(!data.ok)throw new Error(data.message||"뽑기 시작 실패");state.queue=[];state.session={active:true,startRow:Number(data.startRow)||1,startedAt:data.startedAt||new Date().toISOString(),endedAt:"",sessionId:data.sessionId||crypto.randomUUID(),excludedCount:Number(data.excludedCount)||0,lastError:""};saveState();renderAll();restartPolling();alert(`뽑기를 시작했습니다.\n이제부터 들어오는 후원만 수신합니다.${state.session.excludedCount?`\n시작 전 대기 후원 ${state.session.excludedCount}건은 제외했습니다.`:""}`)}catch(e){alert(`뽑기 시작 실패: ${e.message}`);renderSyncStatus("error")}finally{btn.textContent="▶ 뽑기 시작";renderSession()}}
+function endDrawSession(){if(!state.session?.active)return;if(!confirm("새 후원 수신을 종료할까요? 이미 대기열에 등록된 대상은 계속 뽑을 수 있습니다."))return;state.session.active=false;state.session.endedAt=new Date().toISOString();saveState();restartPolling();renderAll()}
+function openModal(id){document.getElementById(id).classList.remove("hidden");document.body.style.overflow="hidden"}function closeModal(id){document.getElementById(id).classList.add("hidden");if($$(".modal-backdrop:not(.hidden)").length===0)document.body.style.overflow=""}
+function renderSettings(){const s=state.settings,i=s.integration,sound={...defaultSettings.sound,...(s.sound||{})};$("#settingTitle").value=s.title;$("#settingSubtitle").value=s.subtitle;$("#settingTotal").value=s.total;$("#settingColumns").value=s.columns;$("#settingLoseText").value=s.loseText;renderPrizeEditor(s.prizes);$("#soopEnabled").checked=i.enabled;$("#soopExecUrl").value=i.execUrl;$("#soopToken").value=i.token;$("#soopPollSeconds").value=String(i.pollSeconds);$("#soopBjId").value=i.bjId;$("#soopMaxDraws").value=i.maxDraws;$("#kindBalloon").checked=i.kinds.BALLOON_GIFTED!==false;$("#kindChallenge").checked=i.kinds.CHALLENGE_MISSION_GIFTED!==false;$("#kindBattle").checked=i.kinds.BATTLE_MISSION_GIFTED!==false;const radio=$(`input[name="ruleMode"][value="${i.ruleMode}"]`);if(radio)radio.checked=true;$("#ratioBalloons").value=i.ratio.balloons;$("#ratioDraws").value=i.ratio.draws;renderRangeRules(i.ranges);renderExactRules(i.exacts);$("#soundEnabled").checked=sound.enabled!==false;$("#soundVolume").value=Math.round(Math.max(0,Math.min(1,Number(sound.volume)||0))*100);$("#soundOperatorEnabled").checked=Boolean(sound.operatorEnabled);$("#soundFirstEnabled").checked=sound.first!==false;$("#soundWinEnabled").checked=sound.win!==false;$("#soundLoseEnabled").checked=sound.lose!==false;updateSoundVolumeLabel();setSoundTestStatus("테스트 버튼으로 각 효과음을 미리 들어볼 수 있습니다.");updateRulePanels();updateSettingsSummary();updateTestDrawResult()}
+function renderPrizeEditor(prizes){const ed=$("#prizeEditor");ed.innerHTML="";prizes.forEach(p=>{const row=document.createElement("div");row.className="prize-edit-row";row.innerHTML=`<label><span>등수</span><input class="edit-rank" type="text" maxlength="12" value="${esc(p.rank)}"></label><label><span>상품명 / 당첨 문구</span><input class="edit-prize" type="text" maxlength="40" value="${esc(p.prize)}"></label><label><span>개수</span><input class="edit-count" type="number" min="0" max="300" value="${Number(p.count)||0}"></label><label><span>색상</span><input class="edit-color color-input" type="color" value="${esc(p.color||"#9f8fff")}"></label><div class="delete-cell"><button class="icon-btn delete-prize">×</button></div>`;ed.appendChild(row)});$$(".prize-editor input").forEach(x=>x.addEventListener("input",updateSettingsSummary));$$(".delete-prize").forEach(x=>x.addEventListener("click",e=>{e.currentTarget.closest(".prize-edit-row").remove();updateSettingsSummary()}))}
+function getEditorPrizes(){return $$(".prize-edit-row").map(r=>({rank:r.querySelector(".edit-rank").value.trim()||"당첨",prize:r.querySelector(".edit-prize").value.trim()||"상품",count:Math.max(0,Number(r.querySelector(".edit-count").value)||0),color:r.querySelector(".edit-color").value||"#9f8fff"}))}
+function renderRangeRules(rules){const e=$("#rangeRuleEditor");e.innerHTML="";(rules||[]).forEach(r=>e.insertAdjacentHTML("beforeend",`<div class="range-rule-row"><input class="range-min" type="number" min="0" value="${Number(r.min)||0}"><span>~</span><input class="range-max" type="number" min="0" placeholder="제한 없음" value="${r.max??""}"><span>→</span><input class="range-draws" type="number" min="0" value="${Number(r.draws)||0}"><button class="rule-delete">×</button></div>`));bindRuleDeletes()}
+function renderExactRules(rules){const e=$("#exactRuleEditor");e.innerHTML="";(rules||[]).forEach(r=>e.insertAdjacentHTML("beforeend",`<div class="exact-rule-row"><input class="exact-count" type="number" min="0" value="${Number(r.count)||0}"><span>개 →</span><input class="exact-draws" type="number" min="0" value="${Number(r.draws)||0}"><button class="rule-delete">×</button></div>`));bindRuleDeletes()}
+function bindRuleDeletes(){$$(".rule-delete").forEach(x=>x.onclick=e=>{e.currentTarget.parentElement.remove();updateTestDrawResult()});$$('.rule-editor input').forEach(x=>x.oninput=updateTestDrawResult)}
+function getDraftIntegration(){const mode=$('input[name="ruleMode"]:checked')?.value||"ratio";return{enabled:$("#soopEnabled").checked,execUrl:$("#soopExecUrl").value.trim(),token:$("#soopToken").value.trim(),pollSeconds:Math.max(3,Number($("#soopPollSeconds").value)||5),bjId:$("#soopBjId").value.trim(),maxDraws:Math.max(1,Number($("#soopMaxDraws").value)||100),kinds:{BALLOON_GIFTED:$("#kindBalloon").checked,CHALLENGE_MISSION_GIFTED:$("#kindChallenge").checked,BATTLE_MISSION_GIFTED:$("#kindBattle").checked},ruleMode:mode,ratio:{balloons:Math.max(1,Number($("#ratioBalloons").value)||1),draws:Math.max(0,Number($("#ratioDraws").value)||0)},ranges:$$(".range-rule-row").map(r=>({min:Math.max(0,Number(r.querySelector(".range-min").value)||0),max:r.querySelector(".range-max").value===""?null:Math.max(0,Number(r.querySelector(".range-max").value)||0),draws:Math.max(0,Number(r.querySelector(".range-draws").value)||0)})),exacts:$$(".exact-rule-row").map(r=>({count:Math.max(0,Number(r.querySelector(".exact-count").value)||0),draws:Math.max(0,Number(r.querySelector(".exact-draws").value)||0)}))}}
+function getDraftSettings(){return{title:$("#settingTitle").value.trim()||"제리츄 뽑기판",subtitle:$("#settingSubtitle").value.trim()||"오늘의 행운을 뽑아보세요!",total:Math.max(1,Math.min(300,Number($("#settingTotal").value)||100)),columns:Math.max(2,Math.min(20,Number($("#settingColumns").value)||10)),loseText:$("#settingLoseText").value.trim()||"아쉽습니다!",prizes:getEditorPrizes(),sound:getDraftSoundSettings(),integration:getDraftIntegration()}}
+function validateSettings(s){const w=s.prizes.reduce((a,p)=>a+p.count,0);if(!s.prizes.length)return"당첨 항목을 한 개 이상 추가해 주세요.";if(w>s.total)return`당첨 수량이 전체 칸 수보다 ${w-s.total}개 많습니다.`;if(s.integration.enabled&&!s.integration.execUrl)return"송출 연동을 사용할 경우 Apps Script 주소를 입력해 주세요.";return""}
+function updateSettingsSummary(){const s=getDraftSettings(),w=s.prizes.reduce((a,p)=>a+p.count,0),err=validateSettings(s);$("#summaryTotal").textContent=s.total;$("#summaryWin").textContent=w;$("#summaryLose").textContent=Math.max(0,s.total-w);$("#settingError").textContent=err;$("#settingError").classList.toggle("hidden",!err);$("#generateBoardBtn").disabled=Boolean(err)}
+function saveSettingsOnly(){const s=getDraftSettings(),err=validateSettings(s);if(err){updateSettingsSummary();return}state.settings=s;saveState();renderAll();restartPolling();closeModal("settingsModal")}
+function generateFromSettings(){const s=getDraftSettings(),err=validateSettings(s);if(err){updateSettingsSummary();return}if(state.board.some(x=>x.opened)&&!confirm("새 뽑기판을 만들면 현재 진행 기록과 열린 칸이 모두 초기화됩니다. 계속할까요?"))return;state.settings=s;buildBoard();restartPolling();closeModal("settingsModal")}
+function addPrizeRow(){const p=getEditorPrizes(),n=p.length+1,pal=["#72beff","#9f8fff","#ff88bf","#83e5f0","#ffc46b","#78d0a0"];p.push({rank:`${n}등`,prize:"새 상품",count:1,color:pal[(n-1)%pal.length]});renderPrizeEditor(p);updateSettingsSummary()}
+function updateRulePanels(){const m=$('input[name="ruleMode"]:checked')?.value||"ratio";$("#ratioRulePanel").classList.toggle("hidden",m!=="ratio");$("#rangeRulePanel").classList.toggle("hidden",m!=="range");$("#exactRulePanel").classList.toggle("hidden",m!=="exact");updateTestDrawResult()}
+function updateTestDrawResult(){try{$("#testDrawResult").textContent=`${calculateDraws($("#testBalloonCount").value,getDraftIntegration())}회`}catch{$("#testDrawResult").textContent="0회"}}
+function renderPreview(){const g=$("#previewGrid");if(!state.board.length){g.innerHTML=`<div class="empty-state">생성된 뽑기판이 없습니다.</div>`;return}g.innerHTML=state.board.map((x,i)=>`<div class="preview-item ${x.type==="lose"?"lose-preview":""}" style="--preview-color:${esc(x.color||"#9f8fff")}"><b>${formatNumber(i+1)}번 ${x.opened?"· 공개됨":""}</b>${x.type==="win"?`${esc(x.rank)} · ${esc(x.prize)}`:esc(x.prize)}</div>`).join("")}
+function exportCsv(){if(!state.board.length)return;const rows=[["번호","결과","상품/문구","공개 여부","참가자","공개 시각"]];state.board.forEach((x,i)=>rows.push([formatNumber(i+1),x.type==="win"?x.rank:"꽝",x.prize,x.opened?"공개":"미공개",x.participant||"",x.openedAt||""]));const csv="\uFEFF"+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n"),blob=new Blob([csv],{type:"text/csv;charset=utf-8;"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="제리츄_뽑기판_결과.csv";a.click();URL.revokeObjectURL(url)}
+function resetProgress(){if(!state.board.length||!confirm("뽑기 결과 배치는 유지하고, 열린 칸과 기록만 초기화할까요?"))return;state.board=state.board.map(x=>({...x,opened:false,openedAt:null,participant:""}));state.history=[];saveState();renderAll()}
+async function copyWinnerHistory(){
+  const winners=(Array.isArray(state.history)?state.history:[]).filter(x=>x.type==="win");
+  if(!winners.length){alert("복사할 당첨 기록이 없습니다.");return}
+  const groups=[];
+  const groupMap=new Map();
+  winners.forEach(x=>{
+    const boardIndex=Math.max(0,(Number(x.number)||1)-1);
+    const boardItem=state.board[boardIndex];
+    let rank=boardItem?.type==="win"?(boardItem.rank||"당첨"):"";
+    let prize=boardItem?.type==="win"?(boardItem.prize||""):"";
+    if(!rank){
+      const parts=String(x.result||"").split(" · ");
+      rank=parts.shift()||"당첨";
+      prize=parts.join(" · ");
     }
-  });
-
-  return { team1, team2 };
-}
-
-function displayTeam(id, team) {
-  const ul = document.getElementById(id);
-  if (!ul) return;
-
-  ul.innerHTML = "";
-
-  team.forEach((name) => {
-    const li = document.createElement("li");
-    li.textContent = name;
-    ul.appendChild(li);
-  });
-}
-
-function countChangedLines(current, previous) {
-  if (!previous) return Math.max(current.team1.length, current.team2.length);
-
-  const maxLength = Math.max(
-    current.team1.length,
-    current.team2.length,
-    previous.team1.length,
-    previous.team2.length
-  );
-
-  let changed = 0;
-
-  for (let i = 0; i < maxLength; i++) {
-    const cur1 = current.team1[i] || "";
-    const cur2 = current.team2[i] || "";
-    const prev1 = previous.team1[i] || "";
-    const prev2 = previous.team2[i] || "";
-
-    if (cur1 !== prev1 || cur2 !== prev2) changed++;
-  }
-
-  return changed;
-}
-
-function isExactlySameLines(current, previous) {
-  if (!previous) return false;
-  if (!Array.isArray(previous.team1) || !Array.isArray(previous.team2)) return false;
-  if (current.team1.length !== previous.team1.length) return false;
-  if (current.team2.length !== previous.team2.length) return false;
-
-  for (let i = 0; i < current.team1.length; i++) {
-    if (current.team1[i] !== previous.team1[i]) return false;
-  }
-
-  for (let i = 0; i < current.team2.length; i++) {
-    if (current.team2[i] !== previous.team2[i]) return false;
-  }
-
-  return true;
-}
-
-function shuffleTeams() {
-  if (!requireAdmin("팀 섞기")) return;
-
-  const players = getPlayers();
-  if (!validatePlayers(players)) return;
-
-  const previousResult = JSON.parse(localStorage.getItem("lastTeams") || "null");
-  let result = null;
-  let attempts = 0;
-
-  do {
-    result = makeTeamsFromPairs();
-    attempts++;
-
-    if (result.error) {
-      alert(result.error);
-      return;
+    const key=`${rank}\u0000${prize}`;
+    if(!groupMap.has(key)){
+      const group={rank,prize,items:[]};
+      groupMap.set(key,group);
+      groups.push(group);
     }
-  } while (
-    attempts < 300 &&
-    (
-      isExactlySameLines(result, previousResult) ||
-      (previousResult && countChangedLines(result, previousResult) < 2)
-    )
-  );
+    groupMap.get(key).items.push({participant:x.participant||"이름 없음",number:x.number||"-"});
+  });
+  const lines=[`[${state.settings.title||"제리츄 뽑기판"} 당첨자]`,""];
+  groups.forEach((group,index)=>{
+    lines.push(`${group.rank}${group.prize?` | ${group.prize}`:""}`);
+    group.items.forEach(item=>lines.push(`- ${item.participant} (${item.number}번)`));
+    if(index<groups.length-1)lines.push("");
+  });
+  lines.push("",`총 당첨 ${winners.length}건`);
+  const copiedText=lines.join("\n");
+  try{
+    await navigator.clipboard.writeText(copiedText);
+  }catch{
+    const textarea=document.createElement("textarea");
+    textarea.value=copiedText;
+    textarea.style.position="fixed";
+    textarea.style.opacity="0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    textarea.remove();
+  }
+  const button=$("#copyWinnersBtn");
+  if(button){
+    const original=button.textContent;
+    button.textContent="복사 완료 ✓";
+    button.classList.add("copied");
+    setTimeout(()=>{button.textContent=original;button.classList.remove("copied")},1400);
+  }
+}
+function clearHistory(){if(!confirm("최근 결과 기록만 지울까요? 열린 칸은 그대로 유지됩니다."))return;state.history=[];saveState();renderHistory()}
 
-  if (
-    previousResult &&
-    (
-      isExactlySameLines(result, previousResult) ||
-      countChangedLines(result, previousResult) < 2
-    )
-  ) {
-    const teamMessage = document.getElementById("teamMessage");
-    if (teamMessage) {
-      teamMessage.textContent = "조건을 만족하는 새 팀 구성을 찾지 못했습니다. 한 번 더 섞어주세요.";
+function simpleHash(text){let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)}return String(h>>>0)}
+function publicBroadcastSnapshot(){
+  const cur=currentTarget();
+  const opened=state.board.filter(x=>x.opened).length;
+  const total=state.board.length||Number(state.settings.total)||0;
+  return{
+    settings:{title:state.settings.title,subtitle:state.settings.subtitle,total,columns:state.settings.columns,loseText:state.settings.loseText,prizes:state.settings.prizes,sound:state.settings.sound},
+    board:state.board.map((x,i)=>x.opened?{i,opened:true,type:x.type,prizeIndex:x.prizeIndex,rank:x.rank,prize:x.prize,color:x.color,participant:x.participant||""}:null),
+    history:state.history.slice(-10),
+    queue:state.queue.filter(q=>q.remaining>0).slice(0,8).map(q=>({nickname:q.nickname,remaining:q.remaining,total:q.total,source:q.source,balloonCount:q.balloonCount||0,kindLabel:q.kindLabel||"",memo:q.memo||""})),
+    session:{active:!!state.session?.active,startedAt:state.session?.startedAt||"",endedAt:state.session?.endedAt||""},
+    lastResult:state.lastResult||null,
+    stats:{remaining:Math.max(0,total-opened),winningRemaining:state.board.filter(x=>x.type==="win"&&!x.opened).length,progress:total?Math.round(opened/total*100):0},
+    currentTarget:cur?{nickname:cur.nickname,remaining:cur.remaining,source:cur.source,balloonCount:cur.balloonCount||0,kindLabel:cur.kindLabel||"",memo:cur.memo||""}:null,
+    updatedAt:new Date().toISOString()
+  }
+}
+function scheduleBroadcastPublish(force=false){
+  if(IS_BROADCAST_VIEW||!state.broadcast?.key||!state.settings.integration?.execUrl||!state.settings.integration?.token)return;
+  if(broadcastPublishing){broadcastPublishQueued=true;return}
+  clearTimeout(broadcastPublishTimer);
+  broadcastPublishTimer=setTimeout(()=>publishBroadcastState(force),force?10:25)
+}
+async function publishBroadcastState(force=false){
+  if(IS_BROADCAST_VIEW||!state.broadcast?.key)return;
+  if(broadcastPublishing){broadcastPublishQueued=true;return}
+  broadcastPublishing=true;
+  broadcastPublishQueued=false;
+  try{
+    const snap=publicBroadcastSnapshot();
+    const snapshotJson=JSON.stringify(snap);
+    const snapshotHash=simpleHash(snapshotJson);
+    if(!force&&snapshotHash===broadcastMetaHash)return;
+    const s=state.settings.integration||{};
+    const revision=`${Date.now()}-${crypto.randomUUID()}`;
+    if(broadcastFastMode){
+      const data=await postFormJson(s.execUrl,{
+        action:"drawBroadcastFastPush",token:s.token||"",bjId:state.broadcast.bjId||s.bjId||"",key:state.broadcast.key,
+        revision,snapshot:snapshotJson
+      });
+      if(isUnsupportedActionResponse(data)){
+        broadcastFastMode=false;
+        await publishBroadcastStateLegacy(snap,true)
+      }else if(!data.ok){
+        throw new Error(data.message||"고속 송출 상태 저장 실패")
+      }else{
+        lastBroadcastRevision=data.revision||revision;
+      }
+    }else{
+      await publishBroadcastStateLegacy(snap,force)
     }
-    return;
-  }
-
-  displayTeam("team1", result.team1);
-  displayTeam("team2", result.team2);
-
-  localStorage.setItem("lastTeams", JSON.stringify(result));
-
-  const lockedPairCount = buildPairData().filter((pair) => pair.locked).length;
-  const teamMessage = document.getElementById("teamMessage");
-  if (!teamMessage) return;
-
-  if (!previousResult) {
-    teamMessage.textContent =
-      `${players.length}명 기준으로 팀이 섞였습니다.` +
-      (lockedPairCount > 0 ? ` 팀 고정 페어 ${lockedPairCount}개가 반영되었습니다.` : "");
-  } else {
-    teamMessage.textContent =
-      `직전 결과와 완전히 같은 줄 없이, ${countChangedLines(result, previousResult)}라인 다르게 섞었습니다.` +
-      (lockedPairCount > 0 ? ` 팀 고정 페어 ${lockedPairCount}개 반영.` : "");
+    broadcastMetaHash=snapshotHash;
+  }catch(e){
+    console.error("broadcast publish",e)
+  }finally{
+    broadcastPublishing=false;
+    if(broadcastPublishQueued){broadcastPublishQueued=false;scheduleBroadcastPublish(true)}
   }
 }
-
-function copyTeams() {
-  if (!requireAdmin("팀 복사")) return;
-
-  const team1Items = Array.from(document.querySelectorAll("#team1 li")).map((li) => li.textContent.trim());
-  const team2Items = Array.from(document.querySelectorAll("#team2 li")).map((li) => li.textContent.trim());
-
-  if (team1Items.length === 0 && team2Items.length === 0) {
-    alert("먼저 팀을 섞어주세요.");
-    return;
+async function publishBroadcastStateLegacy(snap,force=false){
+  const meta={settings:snap.settings,history:snap.history,queue:snap.queue,session:snap.session,lastResult:snap.lastResult,stats:snap.stats,currentTarget:snap.currentTarget,updatedAt:snap.updatedAt};
+  const metaJson=JSON.stringify(meta),metaHash=simpleHash(metaJson),bjId=state.broadcast.bjId||state.settings.integration.bjId||"";
+  if(force||metaHash!==broadcastMetaHash){
+    const r=await fetchJson(apiUrl("drawBroadcastMeta",{bjId,key:state.broadcast.key,meta:metaJson}));
+    if(!r.ok)throw new Error(r.message||"송출 상태 저장 실패")
   }
-
-  let text = "블루\t레드\n";
-  const maxLength = Math.max(team1Items.length, team2Items.length);
-
-  for (let i = 0; i < maxLength; i++) {
-    text += `${team1Items[i] || ""}\t${team2Items[i] || ""}\n`;
-  }
-
-  navigator.clipboard.writeText(text)
-    .then(() => {
-      const teamMessage = document.getElementById("teamMessage");
-      if (teamMessage) teamMessage.textContent = "블루 / 레드 형식으로 복사되었습니다.";
-    })
-    .catch(() => {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-
-      const teamMessage = document.getElementById("teamMessage");
-      if (teamMessage) teamMessage.textContent = "블루 / 레드 형식으로 복사되었습니다.";
-    });
-}
-
-/* =========================
-   맵 선택
-========================= */
-
-function createDefaultMapSelection() {
-  const result = {};
-  Object.keys(MAP_GROUPS).forEach((groupName) => {
-    result[groupName] = [...MAP_GROUPS[groupName]];
-  });
-  return result;
-}
-
-function saveMapSelectionState() {
-  localStorage.setItem("selectedMapsByGroup", JSON.stringify(selectedMapsByGroup));
-}
-
-function loadMapSelectionState() {
-  const saved = JSON.parse(localStorage.getItem("selectedMapsByGroup") || "null");
-
-  if (!saved || typeof saved !== "object") {
-    selectedMapsByGroup = createDefaultMapSelection();
-    return;
-  }
-
-  const normalized = createDefaultMapSelection();
-
-  Object.keys(MAP_GROUPS).forEach((groupName) => {
-    if (Array.isArray(saved[groupName])) {
-      normalized[groupName] = saved[groupName].filter((mapName) =>
-        MAP_GROUPS[groupName].includes(mapName)
-      );
+  const chunkCount=Math.max(1,Math.ceil(snap.board.length/BROADCAST_CHUNK_SIZE));
+  const jobs=[];
+  for(let i=0;i<chunkCount;i++){
+    const chunkJson=JSON.stringify(snap.board.slice(i*BROADCAST_CHUNK_SIZE,(i+1)*BROADCAST_CHUNK_SIZE));
+    const h=simpleHash(chunkJson);
+    if(force||broadcastChunkHashes[i]!==h){
+      jobs.push(fetchJson(apiUrl("drawBroadcastChunk",{bjId,key:state.broadcast.key,chunkIndex:i,chunk:chunkJson})).then(r=>{
+        if(!r.ok)throw new Error(r.message||"송출 보드 저장 실패");
+        broadcastChunkHashes[i]=h
+      }))
     }
-  });
-
-  selectedMapsByGroup = normalized;
-}
-
-function isMapSelected(groupName, mapName) {
-  return (selectedMapsByGroup[groupName] || []).includes(mapName);
-}
-
-function isGroupFullySelected(groupName) {
-  return (selectedMapsByGroup[groupName] || []).length === MAP_GROUPS[groupName].length;
-}
-
-function toggleMapGroup(groupName) {
-  if (!requireAdmin("맵 선택")) return;
-  if (!MAP_GROUPS[groupName]) return;
-
-  if (isGroupFullySelected(groupName)) {
-    selectedMapsByGroup[groupName] = [];
-  } else {
-    selectedMapsByGroup[groupName] = [...MAP_GROUPS[groupName]];
   }
-
-  saveMapSelectionState();
-  renderMapBoard();
+  await Promise.all(jobs)
 }
-
-function toggleMapSelection(groupName, mapName) {
-  if (!requireAdmin("맵 선택")) return;
-  if (!MAP_GROUPS[groupName] || !MAP_GROUPS[groupName].includes(mapName)) return;
-
-  const current = selectedMapsByGroup[groupName] || [];
-  const exists = current.includes(mapName);
-
-  if (exists) {
-    selectedMapsByGroup[groupName] = current.filter((name) => name !== mapName);
-  } else {
-    selectedMapsByGroup[groupName] = [...current, mapName];
-  }
-
-  saveMapSelectionState();
-  renderMapBoard();
+async function copyBroadcastUrl(layout="full"){
+  const s=state.settings.integration||{};
+  if(!s.execUrl||!s.token){alert("관리 설정 → SOOP 연동에서 Apps Script 주소와 연동 토큰을 먼저 저장해 주세요.");return}
+  const btn=layout==="mini"?$("#copyMiniBroadcastUrlBtn"):$("#copyBroadcastUrlBtn");
+  btn.disabled=true;const originalText=btn.textContent;btn.textContent="주소 준비 중...";
+  try{
+    const data=await fetchJson(apiUrl("drawBroadcastKey",{bjId:s.bjId||""}));
+    if(!data.ok)throw new Error(data.message||"송출 키 생성 실패");
+    state.broadcast={key:data.key,bjId:data.bjId};
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+    broadcastMetaHash="";broadcastChunkHashes=[];
+    await publishBroadcastState(true);
+    const url=new URL(location.href);url.search="";url.hash="";
+    url.searchParams.set("view","broadcast");
+    if(layout==="mini")url.searchParams.set("layout","mini");
+    url.searchParams.set("api",s.execUrl);
+    url.searchParams.set("bjId",data.bjId);
+    url.searchParams.set("key",data.key);
+    const text=url.toString();
+    try{await navigator.clipboard.writeText(text)}catch{const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove()}
+    alert(`${layout==="mini"?"미니":"전체"} 송출용 주소를 복사했습니다.\nOBS 브라우저 소스의 URL에 붙여넣어 주세요.`)
+  }catch(e){alert(`송출 주소 생성 실패: ${e.message}`)}finally{btn.disabled=false;btn.textContent=originalText}
 }
-
-function renderMapBoard() {
-  const board = document.getElementById("mapBoard");
-  if (!board) return;
-
-  board.innerHTML = Object.keys(MAP_GROUPS)
-    .map((groupName) => {
-      const maps = MAP_GROUPS[groupName];
-      const selectedCount = (selectedMapsByGroup[groupName] || []).length;
-      const groupChecked = selectedCount > 0;
-
-      return `
-        <div class="map-group-card">
-          <button
-            type="button"
-            class="map-group-toggle${groupChecked ? " checked" : ""}"
-            onclick="toggleMapGroup('${escapeJs(groupName)}')"
-          >
-            <span class="map-group-check">${groupChecked ? "☑" : "☐"}</span>
-            <span class="map-group-name">${escapeHtml(groupName)}</span>
-          </button>
-
-          <div class="map-chip-list">
-            ${maps.map((mapName) => {
-              const selected = isMapSelected(groupName, mapName);
-              return `
-                <button
-                  type="button"
-                  class="map-chip${selected ? " selected" : ""}${MZ_MAPS.includes(mapName) ? " mz-map" : ""}"
-                  onclick="toggleMapSelection('${escapeJs(groupName)}','${escapeJs(mapName)}')"
-                >
-                  ${selected ? "✓ " : ""}${escapeHtml(mapName)}
-                </button>
-              `;
-            }).join("")}
-          </div>
-        </div>
-      `;
-    })
-    .join("");
-}
-
-function getAvailableMapsFlat() {
-  const result = [];
-
-  Object.keys(selectedMapsByGroup).forEach((groupName) => {
-    (selectedMapsByGroup[groupName] || []).forEach((mapName) => {
-      result.push({ groupName, mapName });
-    });
+function publishBroadcastPulse(result){
+  if(IS_BROADCAST_VIEW||!result||!state.broadcast?.key)return;
+  const s=state.settings.integration||{};
+  if(!s.execUrl||!s.token)return;
+  const body=new URLSearchParams({
+    action:"drawBroadcastPulsePush",
+    token:s.token||"",
+    bjId:state.broadcast.bjId||s.bjId||"",
+    key:state.broadcast.key,
+    pulse:JSON.stringify({id:result.id,at:result.at,result})
   });
-
-  return result;
+  fetch(s.execUrl,{method:"POST",body,keepalive:true}).catch(e=>console.warn("broadcast pulse push",e));
 }
-
-function drawMap() {
-  if (!requireAdmin("맵 추첨")) return;
-
-  const availableMaps = getAvailableMapsFlat();
-
-  if (availableMaps.length === 0) {
-    alert("최소 1개 이상의 맵을 선택해주세요.");
+function scheduleNextBroadcastPulse(delay){
+  clearTimeout(broadcastPulseTimer);
+  broadcastPulseTimer=setTimeout(loadBroadcastPulse,Math.max(250,Number(delay)||BROADCAST_PULSE_POLL_MS));
+}
+function applyBroadcastPulse(pulse){
+  const result=pulse?.result||pulse;
+  if(!result?.id||result.id===lastBroadcastPulseId||result.id===lastBroadcastResultId)return;
+  const age=Date.now()-new Date(result.at||pulse?.at||0).getTime();
+  lastBroadcastPulseId=result.id;
+  lastBroadcastResultId=result.id;
+  if(age<0||age>12000)return;
+  const batchResults=Array.isArray(result.batchResults)?result.batchResults:[];
+  if(batchResults.length>1){
+    batchResults.forEach(x=>{const index=Math.max(0,Number(x.index)||0);if(Array.isArray(state.board)&&state.board[index])state.board[index]={opened:true,type:x.type,prizeIndex:x.prizeIndex,rank:x.rank,prize:x.prize,color:x.color,participant:x.participant||result.participant||""}});
+    renderBoard();
+    renderBroadcastPrizeStrip();
+    showBatchResultSummary(result);
     return;
   }
-
-  const randomIndex = Math.floor(Math.random() * availableMaps.length);
-  const selected = availableMaps[randomIndex];
-
-  localStorage.setItem("selectedMap", selected.mapName);
-
-  const mapMessage = document.getElementById("mapMessage");
-  const mapResult = document.getElementById("mapResult");
-
-  if (mapMessage) mapMessage.textContent = `추첨 맵: ${selected.mapName}`;
-  if (mapResult) mapResult.textContent = selected.mapName;
-}
-
-function copyMap() {
-  if (!requireAdmin("맵 복사")) return;
-
-  const text =
-    document.getElementById("mapResult")?.textContent?.trim() ||
-    document.getElementById("mapMessage")?.textContent?.replace("추첨 맵: ", "").replace(" (복사됨)", "").trim() ||
-    "";
-
-  if (!text || text === "-" || text === "맵 추첨 버튼을 눌러주세요.") {
-    alert("먼저 맵을 추첨해주세요.");
-    return;
+  const index=Math.max(0,Number(result.index)||0);
+  if(Array.isArray(state.board)&&state.board[index]){
+    state.board[index]={opened:true,type:result.type,prizeIndex:result.prizeIndex,rank:result.rank,prize:result.prize,color:result.color,participant:result.participant||""};
+    renderBoard();
+    renderBroadcastPrizeStrip();
   }
-
-  navigator.clipboard.writeText(text)
-    .then(() => {
-      const mapMessage = document.getElementById("mapMessage");
-      if (mapMessage) mapMessage.textContent = `추첨 맵: ${text} (복사됨)`;
-    })
-    .catch(() => {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-
-      const mapMessage = document.getElementById("mapMessage");
-      if (mapMessage) mapMessage.textContent = `추첨 맵: ${text} (복사됨)`;
-    });
+  showResult({type:result.type,prizeIndex:result.prizeIndex,rank:result.rank,prize:result.prize,color:result.color},index,result.participant||"이름 없음");
+  clearTimeout(broadcastResultTimer);
+  broadcastResultTimer=setTimeout(()=>closeModal("resultModal"),850);
+}
+async function loadBroadcastPulse(){
+  if(!IS_BROADCAST_VIEW||broadcastPulseRunning)return;
+  broadcastPulseRunning=true;
+  let delay=state.session?.active?BROADCAST_PULSE_POLL_MS:BROADCAST_PULSE_IDLE_MS;
+  try{
+    const url=publicApiUrl("drawBroadcastPulseRead",{since:lastBroadcastPulseId});
+    if(!url)return;
+    const data=await fetchJson(url);
+    if(data?.ok&&data.pulse&&!data.unchanged)applyBroadcastPulse(data.pulse);
+  }catch(e){
+    console.warn("broadcast pulse read",e);
+    delay=1200;
+  }finally{
+    broadcastPulseRunning=false;
+    scheduleNextBroadcastPulse(delay);
+  }
+}
+function renderBroadcastPrizeStrip(){
+  const strip=$("#broadcastPrizeStrip");if(!strip)return;
+  if(!IS_BROADCAST_VIEW){strip.innerHTML="";return}
+  const prizes=Array.isArray(state.settings.prizes)?state.settings.prizes:[];
+  const maxPerRow=5;
+  const rows=[];
+  for(let start=0;start<prizes.length;start+=maxPerRow){
+    const row=prizes.slice(start,start+maxPerRow).map((p,offset)=>{
+      const i=start+offset;
+      const total=Math.max(0,Number(p.count)||0);
+      const opened=state.board.filter(x=>x.opened&&x.type==="win"&&Number(x.prizeIndex)===i).length;
+      const remaining=state.board.length?Math.max(0,total-opened):total;
+      return `<div class="broadcast-prize-chip ${remaining<=0?"soldout":""}" style="--chip-color:${esc(p.color||"#72beff")}"><div class="chip-top"><span class="chip-rank">${esc(p.rank)}</span><strong class="chip-count">${remaining}개</strong></div><em class="chip-prize">${esc(p.prize||"")}</em></div>`;
+    }).join("");
+    rows.push(`<div class="broadcast-prize-row">${row}</div>`);
+  }
+  strip.innerHTML=rows.join("");
+  strip.classList.toggle("multi-row",rows.length>1);
+}
+function renderBroadcastSidePanel(){
+  const panel=$("#broadcastSidePanel"),list=$("#broadcastPrizePanelList");
+  if(panel)panel.classList.add("hidden");
+  if(list)list.innerHTML="";
 }
 
-function resetMap() {
-  if (!requireAdmin("맵 초기화")) return;
-
-  selectedMapsByGroup = createDefaultMapSelection();
-  saveMapSelectionState();
-  localStorage.removeItem("selectedMap");
-
-  const mapMessage = document.getElementById("mapMessage");
-  const mapResult = document.getElementById("mapResult");
-
-  if (mapMessage) mapMessage.textContent = "맵 추첨 버튼을 눌러주세요.";
-  if (mapResult) mapResult.textContent = "-";
-
-  renderMapBoard();
+function renderBroadcastTopbar(){
+  const title=$("#broadcastTitle");if(!title)return;
+  title.textContent=state.settings.title||"제리츄 뽑기판";
+  const cur=currentTarget();
+  $("#broadcastCurrentTarget").textContent=cur?`${cur.nickname} · 남은 ${cur.remaining}회`:"대기 중";
+  $("#broadcastCurrentMeta").textContent=cur?(cur.source==="soop"?`별풍선 ${Number(cur.balloonCount||0).toLocaleString()}개 · ${cur.kindLabel||"SOOP 후원"}`:(cur.memo||"수동 등록")):"후원 대기열을 기다리고 있습니다.";
+  $("#broadcastQueueCount").textContent=`${state.queue.filter(q=>q.remaining>0).length}명`;
+  const total=state.board.length||Number(state.settings.total)||0,opened=state.board.filter(x=>x.opened).length;
+  $("#broadcastRemaining").textContent=Math.max(0,total-opened);
 }
-
-function loadSavedMap() {
-  const savedMap = localStorage.getItem("selectedMap");
-  const mapMessage = document.getElementById("mapMessage");
-  const mapResult = document.getElementById("mapResult");
-
-  if (savedMap && mapMessage) mapMessage.textContent = `추첨 맵: ${savedMap}`;
-  if (savedMap && mapResult) mapResult.textContent = savedMap;
+function publicApiUrl(action,extra={}){
+  const base=PAGE_PARAMS.get("api")||"";if(!base)return"";
+  const u=new URL(base);u.searchParams.set("action",action);u.searchParams.set("bjId",PAGE_PARAMS.get("bjId")||"");u.searchParams.set("key",PAGE_PARAMS.get("key")||"");
+  Object.entries(extra).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=="")u.searchParams.set(k,v)});u.searchParams.set("_",Date.now());return u.toString()
 }
-
-/* =========================
-   스케줄
-========================= */
-
-function getSchedules() {
-  return schedulesCache;
-}
-
-function startScheduleSync() {
-  onSnapshot(
-    schedulesCollection,
-    (snapshot) => {
-      schedulesCache = snapshot.docs.map((item) => ({
-        id: item.id,
-        ...item.data()
-      }));
-
-      renderCalendar();
-      updateHitchaCount();
-    },
-    (error) => {
-      console.error(error);
-      const message = document.getElementById("scheduleMessage");
-      if (message) {
-        message.textContent = "Firebase 연결 오류가 발생했습니다.";
+function applyBroadcastData(data){
+  const meta=data.meta||{},settings=meta.settings||{},boardData=Array.isArray(data.board)?data.board:[];
+  const total=Math.max(0,Number(settings.total)||boardData.length||0);
+  state.settings={...state.settings,...settings,integration:state.settings.integration};
+  state.board=Array.from({length:total},(_,i)=>{
+    const x=boardData[i];return x&&x.opened?{opened:true,type:x.type,prizeIndex:x.prizeIndex,rank:x.rank,prize:x.prize,color:x.color,participant:x.participant||""}:{opened:false,type:"hidden",rank:"",prize:"",color:"#9ba7b8",participant:""}
+  });
+  state.history=Array.isArray(meta.history)?meta.history:[];
+  state.queue=(Array.isArray(meta.queue)?meta.queue:[]).map((q,i)=>({...q,id:`broadcast-${i}`,used:0}));
+  state.session={...state.session,...(meta.session||{})};
+  state.lastResult=meta.lastResult||null;
+  renderAll();
+  const conn=$("#broadcastConnectionText");conn.textContent="실시간 연결";conn.className="ok";
+  const result=meta.lastResult;
+  if(result?.id&&result.id!==lastBroadcastResultId){
+    const age=Date.now()-new Date(result.at||0).getTime();
+    lastBroadcastResultId=result.id;
+    if(age>=0&&age<12000){
+      if(Array.isArray(result.batchResults)&&result.batchResults.length>1){
+        showBatchResultSummary(result);
+      }else{
+        showResult({type:result.type,prizeIndex:result.prizeIndex,rank:result.rank,prize:result.prize,color:result.color},Number(result.index)||0,result.participant||"이름 없음");
+        clearTimeout(broadcastResultTimer);broadcastResultTimer=setTimeout(()=>closeModal("resultModal"),850)
       }
     }
-  );
-}
-
-function updateHitchaCount() {
-  const schedules = getSchedules();
-  const targetMonth = String(calendarMonth + 1).padStart(2, "0");
-  const targetYear = String(calendarYear);
-
-  const count = schedules.filter(
-    (item) =>
-      item.category === "힛차" &&
-      item.date &&
-      item.date.startsWith(`${targetYear}-${targetMonth}-`)
-  ).length;
-
-  const hitchaCount = document.getElementById("hitchaCount");
-  if (hitchaCount) {
-    hitchaCount.textContent = `이번달 힛차 ${count}회`;
   }
 }
-
-function formatDateKey(year, month, day) {
-  const mm = String(month + 1).padStart(2, "0");
-  const dd = String(day).padStart(2, "0");
-  return `${year}-${mm}-${dd}`;
+function applyBroadcastSnapshot(snapshot){
+  const safe=snapshot&&typeof snapshot==="object"?snapshot:{};
+  const {board,...meta}=safe;
+  applyBroadcastData({meta,board:Array.isArray(board)?board:[]})
 }
-
-function getSchedulesForDate(dateKey) {
-  return getSchedules().filter((item) => item.date === dateKey);
+function scheduleNextBroadcastPoll(delay){
+  clearTimeout(broadcastPollTimer);
+  broadcastPollTimer=setTimeout(loadBroadcastState,Math.max(250,Number(delay)||BROADCAST_FAST_POLL_MS))
 }
-
-function changeMonth(delta) {
-  calendarMonth += delta;
-
-  if (calendarMonth < 0) {
-    calendarMonth = 11;
-    calendarYear -= 1;
-  }
-
-  if (calendarMonth > 11) {
-    calendarMonth = 0;
-    calendarYear += 1;
-  }
-
-  renderCalendar();
-}
-
-function renderCalendar() {
-  const label = document.getElementById("calendarLabel");
-  const daysContainer = document.getElementById("calendarDays");
-
-  if (!label || !daysContainer) return;
-
-  label.textContent = `${calendarYear}년 ${calendarMonth + 1}월`;
-  daysContainer.innerHTML = "";
-  updateHitchaCount();
-
-  const firstDay = new Date(calendarYear, calendarMonth, 1);
-  const startWeekday = firstDay.getDay();
-  const daysInMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
-  const prevMonthDays = new Date(calendarYear, calendarMonth, 0).getDate();
-  const today = new Date();
-
-  const cells = [];
-
-  for (let i = 0; i < startWeekday; i++) {
-    cells.push({
-      day: prevMonthDays - startWeekday + i + 1,
-      other: true,
-      monthOffset: -1
-    });
-  }
-
-  for (let day = 1; day <= daysInMonth; day++) {
-    cells.push({ day, other: false, monthOffset: 0 });
-  }
-
-  while (cells.length < 35) {
-    cells.push({
-      day: cells.length - (startWeekday + daysInMonth) + 1,
-      other: true,
-      monthOffset: 1
-    });
-  }
-
-  cells.forEach((cell) => {
-    let cellYear = calendarYear;
-    let cellMonth = calendarMonth + cell.monthOffset;
-
-    if (cellMonth < 0) {
-      cellMonth = 11;
-      cellYear -= 1;
-    }
-
-    if (cellMonth > 11) {
-      cellMonth = 0;
-      cellYear += 1;
-    }
-
-    const dateKey = formatDateKey(cellYear, cellMonth, cell.day);
-    const events = getSchedulesForDate(dateKey);
-
-    const dayCell = document.createElement("div");
-    dayCell.className = "day-cell" + (cell.other ? " other-month" : "");
-
-    if (
-      cellYear === today.getFullYear() &&
-      cellMonth === today.getMonth() &&
-      cell.day === today.getDate()
-    ) {
-      dayCell.className += " today";
-    }
-
-    dayCell.onclick = () => selectCalendarDate(dateKey);
-
-    const eventHtml = events
-      .slice(0, 3)
-      .map((event) => `
-        <div class="event-item" onclick="event.stopPropagation(); window.editScheduleById('${event.id}')">
-          <span class="event-bullet" style="background:${categoryColors[event.category] || "#a855f7"}"></span>
-          <span>${escapeHtml(event.text || "")}</span>
-          <span class="event-time">${escapeHtml(event.time || "")}</span>
-        </div>
-      `)
-      .join("");
-
-    const moreHtml =
-      events.length > 3
-        ? `<div class="event-item" style="color:#94a3b8;">+${events.length - 3}개 더보기</div>`
-        : "";
-
-    dayCell.innerHTML = `
-      <div class="day-number">${cell.day}일</div>
-      <div class="event-list">${eventHtml}${moreHtml}</div>
-    `;
-
-    daysContainer.appendChild(dayCell);
-  });
-}
-
-function selectCalendarDate(dateKey) {
-  const scheduleDate = document.getElementById("scheduleDate");
-  const scheduleMessage = document.getElementById("scheduleMessage");
-
-  if (scheduleDate) scheduleDate.value = dateKey;
-  selectedScheduleId = null;
-
-  if (scheduleMessage) {
-    scheduleMessage.textContent = `${dateKey} 날짜로 입력할 수 있습니다.`;
-  }
-}
-
-function openScheduleFormForToday() {
-  if (!requireAdmin("일정 등록")) return;
-
-  const today = new Date();
-
-  const scheduleDate = document.getElementById("scheduleDate");
-  const scheduleTime = document.getElementById("scheduleTime");
-  const scheduleText = document.getElementById("scheduleText");
-  const scheduleCategory = document.getElementById("scheduleCategory");
-
-  if (scheduleDate) {
-    scheduleDate.value = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
-  }
-  if (scheduleTime) scheduleTime.value = "";
-  if (scheduleText) scheduleText.value = "";
-  if (scheduleCategory) scheduleCategory.value = "방송";
-
-  selectedScheduleId = null;
-}
-
-function clearScheduleInputs() {
-  const scheduleDate = document.getElementById("scheduleDate");
-  const scheduleTime = document.getElementById("scheduleTime");
-  const scheduleText = document.getElementById("scheduleText");
-  const scheduleCategory = document.getElementById("scheduleCategory");
-  const scheduleMessage = document.getElementById("scheduleMessage");
-
-  if (scheduleDate) scheduleDate.value = "";
-  if (scheduleTime) scheduleTime.value = "";
-  if (scheduleText) scheduleText.value = "";
-  if (scheduleCategory) scheduleCategory.value = "방송";
-
-  selectedScheduleId = null;
-
-  if (scheduleMessage) {
-    scheduleMessage.textContent = "입력값을 초기화했습니다.";
-  }
-}
-
-async function saveScheduleFromForm() {
-  if (!requireAdmin("일정 저장")) return;
-
-  const date = document.getElementById("scheduleDate")?.value || "";
-  const time = document.getElementById("scheduleTime")?.value || "";
-  const text = document.getElementById("scheduleText")?.value.trim() || "";
-  const category = document.getElementById("scheduleCategory")?.value || "방송";
-
-  if (!date || !text) {
-    alert("날짜와 내용을 입력해주세요.");
-    return;
-  }
-
-  const payload = { date, time, text, category };
-
-  try {
-    const scheduleMessage = document.getElementById("scheduleMessage");
-
-    if (selectedScheduleId) {
-      await updateDoc(doc(db, "schedules", selectedScheduleId), payload);
-      if (scheduleMessage) scheduleMessage.textContent = "일정을 수정했습니다.";
-    } else {
-      await addDoc(schedulesCollection, payload);
-      if (scheduleMessage) scheduleMessage.textContent = "일정을 추가했습니다.";
-    }
-
-    clearScheduleInputs();
-  } catch (error) {
-    console.error(error);
-    alert("일정 저장 중 오류가 발생했습니다.");
-  }
-}
-
-function editScheduleById(id) {
-  if (!requireAdmin("일정 수정")) return;
-
-  const item = getSchedules().find((v) => v.id === id);
-  if (!item) return;
-
-  selectedScheduleId = id;
-
-  const scheduleDate = document.getElementById("scheduleDate");
-  const scheduleTime = document.getElementById("scheduleTime");
-  const scheduleText = document.getElementById("scheduleText");
-  const scheduleCategory = document.getElementById("scheduleCategory");
-  const scheduleMessage = document.getElementById("scheduleMessage");
-
-  if (scheduleDate) scheduleDate.value = item.date || "";
-  if (scheduleTime) scheduleTime.value = item.time || "";
-  if (scheduleText) scheduleText.value = item.text || "";
-  if (scheduleCategory) scheduleCategory.value = item.category || "기타";
-
-  if (scheduleMessage) {
-    scheduleMessage.textContent = "선택한 일정이 입력창에 불러와졌습니다. 수정 후 저장을 눌러주세요.";
-  }
-}
-
-async function deleteSelectedSchedule() {
-  if (!requireAdmin("일정 삭제")) return;
-
-  if (!selectedScheduleId) {
-    alert("먼저 수정할 일정 하나를 선택해주세요.");
-    return;
-  }
-
-  if (!confirm("선택한 일정을 삭제할까요?")) return;
-
-  try {
-    await deleteDoc(doc(db, "schedules", selectedScheduleId));
-    clearScheduleInputs();
-
-    const scheduleMessage = document.getElementById("scheduleMessage");
-    if (scheduleMessage) {
-      scheduleMessage.textContent = "선택한 일정을 삭제했습니다.";
-    }
-  } catch (error) {
-    console.error(error);
-    alert("일정 삭제 중 오류가 발생했습니다.");
-  }
-}
-
-/* =========================
-   전적 기록
-========================= */
-
-function getTeamInputs(prefix) {
-  const inputs = [];
-  for (let i = 1; i <= MAX_RECORD_TEAM_SIZE; i++) {
-    const el = document.getElementById(`${prefix}${i}`);
-    if (el) inputs.push(el);
-  }
-  return inputs;
-}
-
-function getFilledTeamMembers(prefix) {
-  return getTeamInputs(prefix)
-    .map((input) => input.value.trim())
-    .filter((name) => name !== "");
-}
-
-function fillTeamInputs(prefix, members = []) {
-  const inputs = getTeamInputs(prefix);
-  inputs.forEach((input, index) => {
-    input.value = members[index] || "";
-  });
-}
-
-function startRecordSync() {
-  const q = query(recordsCollection, orderBy("date", "desc"));
-
-  onSnapshot(
-    q,
-    (snapshot) => {
-      recordsCache = snapshot.docs.map((item) => ({
-        id: item.id,
-        ...item.data()
-      }));
-
-      renderRecords();
-      updateRecordSummary();
-      renderDetailPage();
-    },
-    (error) => {
-      console.error(error);
-      const recordMessage = document.getElementById("recordMessage");
-      if (recordMessage) {
-        recordMessage.textContent = "전적을 불러오는 중 오류가 발생했습니다.";
+async function loadBroadcastState(){
+  if(broadcastPollRunning)return;
+  broadcastPollRunning=true;
+  const conn=$("#broadcastConnectionText");
+  let nextDelay=state.session?.active?BROADCAST_FAST_POLL_MS:BROADCAST_IDLE_POLL_MS;
+  try{
+    if(broadcastFastMode){
+      const url=publicApiUrl("drawBroadcastFastRead",{since:lastBroadcastRevision});
+      if(!url)throw new Error("송출 주소 설정이 없습니다.");
+      const data=await fetchJson(url);
+      if(isUnsupportedActionResponse(data)){
+        broadcastFastMode=false
+      }else if(!data.ok){
+        throw new Error(data.message||"고속 송출 상태 조회 실패")
+      }else{
+        if(data.revision)lastBroadcastRevision=data.revision;
+        if(!data.unchanged&&data.snapshot)applyBroadcastSnapshot(data.snapshot);
+        if(conn){conn.textContent="실시간 연결";conn.className="ok"}
+        nextDelay=state.session?.active?BROADCAST_FAST_POLL_MS:BROADCAST_IDLE_POLL_MS;
+        return
       }
     }
-  );
-}
-
-function updateRecordSummary() {
-  const totalGames = recordsCache.length;
-
-  const killRecords = recordsCache.filter((item) => item.type === "킬내기");
-  const mixedRecords = recordsCache.filter(
-    (item) => item.type === "랜드" || item.type === "공장" || item.type === "GKL"
-  );
-
-  const killWins = killRecords.filter((item) => item.result === "승리").length;
-  const mixedWins = mixedRecords.filter((item) => item.result === "승리").length;
-
-  const killLosses = killRecords.filter((item) => item.result === "패배").length;
-  const mixedLosses = mixedRecords.filter((item) => item.result === "패배").length;
-
-  const overallWins = recordsCache.filter((item) => item.result === "승리").length;
-
-  const killWinRate =
-    killRecords.length > 0 ? ((killWins / killRecords.length) * 100).toFixed(2) : "0.00";
-
-  const overallWinRate =
-    totalGames > 0 ? ((overallWins / totalGames) * 100).toFixed(2) : "0.00";
-
-  const totalGamesEl = document.getElementById("recordTotalGames");
-  const winBreakdownEl = document.getElementById("recordWinBreakdown");
-  const lossBreakdownEl = document.getElementById("recordLossBreakdown");
-  const killWinRateEl = document.getElementById("recordKillWinRate");
-  const overallWinRateEl = document.getElementById("recordOverallWinRate");
-
-  if (totalGamesEl) totalGamesEl.textContent = totalGames;
-  if (winBreakdownEl) winBreakdownEl.textContent = `${killWins} / ${mixedWins}`;
-  if (lossBreakdownEl) lossBreakdownEl.textContent = `${killLosses} / ${mixedLosses}`;
-  if (killWinRateEl) killWinRateEl.textContent = `${killWinRate}%`;
-  if (overallWinRateEl) overallWinRateEl.textContent = `${overallWinRate}%`;
-}
-
-function renderMembersHtml(members) {
-  if (!Array.isArray(members) || members.length === 0) {
-    return `<div>-</div>`;
-  }
-
-  return members.map((member) => `<div>${escapeHtml(member)}</div>`).join("");
-}
-
-function getRecordTypeFilterValue() {
-  return document.getElementById("recordTypeFilter")?.value || "전체";
-}
-
-function setRecordTypeFilterValue(type) {
-  const filter = document.getElementById("recordTypeFilter");
-  if (!filter) return;
-
-  const normalizedType = ["킬내기", "랜드", "공장", "GKL"].includes(type) ? type : "전체";
-  filter.value = normalizedType;
-}
-
-function syncRecordFilterWithInputType() {
-  const selectedType = document.getElementById("recordType")?.value || "전체";
-  setRecordTypeFilterValue(selectedType);
-  renderRecords();
-}
-
-function getRecordsByDateOrder() {
-  return [...recordsCache].sort((a, b) => {
-    const dateA = String(a.date || "");
-    const dateB = String(b.date || "");
-    const dateCompare = dateB.localeCompare(dateA);
-
-    if (dateCompare !== 0) return dateCompare;
-
-    return Number(b.createdAt || 0) - Number(a.createdAt || 0);
-  });
-}
-
-function getVisibleRecords() {
-  const selectedType = getRecordTypeFilterValue();
-  const sortedRecords = getRecordsByDateOrder();
-
-  if (selectedType === "전체") {
-    return sortedRecords;
-  }
-
-  return sortedRecords.filter((item) => item.type === selectedType);
-}
-
-function updateRecordFilterCount(visibleCount) {
-  const countEl = document.getElementById("recordFilterCount");
-  if (!countEl) return;
-
-  const selectedType = getRecordTypeFilterValue();
-  const label = selectedType === "전체" ? "전체" : selectedType;
-  countEl.textContent = `${label} ${visibleCount}개 / 총 ${recordsCache.length}개`;
-}
-
-function resetRecordFilter() {
-  const filter = document.getElementById("recordTypeFilter");
-  if (filter) filter.value = "전체";
-  renderRecords();
-}
-
-function renderRecords() {
-  const list = document.getElementById("recordList");
-  if (!list) return;
-
-  list.innerHTML = "";
-
-  if (recordsCache.length === 0) {
-    updateRecordFilterCount(0);
-    list.innerHTML = `<div class="message">아직 저장된 전적이 없습니다.</div>`;
-    return;
-  }
-
-  const visibleRecords = getVisibleRecords();
-  updateRecordFilterCount(visibleRecords.length);
-
-  if (visibleRecords.length === 0) {
-    list.innerHTML = `<div class="message">선택한 종류의 전적이 없습니다.</div>`;
-    return;
-  }
-
-  visibleRecords.forEach((item) => {
-    const div = document.createElement("div");
-    div.className = "record-item" + (selectedRecordId === item.id ? " selected" : "");
-    div.onclick = () => selectRecord(item.id);
-
-    const myTeam = Array.isArray(item.myTeam) ? item.myTeam : [];
-    const enemyTeam = Array.isArray(item.enemyTeam) ? item.enemyTeam : [];
-
-    div.innerHTML = `
-      <div class="record-item-top">
-        <div>
-          <div class="record-date">${escapeHtml(item.date || "-")}</div>
-        </div>
-        <div class="record-badges">
-          <span class="record-badge">${escapeHtml(item.type || "-")}</span>
-          <span class="record-badge ${item.result === "승리" ? "record-result-win" : "record-result-lose"}">
-            ${escapeHtml(item.result || "-")}
-          </span>
-        </div>
-      </div>
-
-      <div class="record-meta-grid">
-        <div class="record-block">
-          <div class="record-block-title">우리 팀 (${myTeam.length}명)</div>
-          <div class="record-members">
-            ${renderMembersHtml(myTeam)}
-          </div>
-        </div>
-
-        <div class="record-block">
-          <div class="record-block-title">상대 팀 (${enemyTeam.length}명)</div>
-          <div class="record-members">
-            ${renderMembersHtml(enemyTeam)}
-          </div>
-        </div>
-
-        <div class="record-block">
-          <div class="record-block-title">맞밸런스</div>
-          <div class="record-single-value">${escapeHtml(item.balance || "-")}</div>
-        </div>
-
-        <div class="record-block">
-          <div class="record-block-title">순수킬</div>
-          <div class="record-single-value">${Number(item.pureKills || 0)}</div>
-        </div>
-      </div>
-    `;
-
-    list.appendChild(div);
-  });
-}
-
-function selectRecord(id) {
-  selectedRecordId = id;
-
-  const item = recordsCache.find((v) => v.id === id);
-  if (!item) return;
-
-  const recordDate = document.getElementById("recordDate");
-  const recordType = document.getElementById("recordType");
-  const recordResult = document.getElementById("recordResult");
-  const recordBalance = document.getElementById("recordBalance");
-  const recordPureKills = document.getElementById("recordPureKills");
-  const recordMessage = document.getElementById("recordMessage");
-
-  if (recordDate) recordDate.value = item.date || "";
-  if (recordType) recordType.value = item.type || "킬내기";
-  if (recordResult) recordResult.value = item.result || "승리";
-  if (recordBalance) recordBalance.value = item.balance || "";
-  if (recordPureKills) recordPureKills.value = item.pureKills ?? "";
-
-  fillTeamInputs("myTeam", item.myTeam || []);
-  fillTeamInputs("enemyTeam", item.enemyTeam || []);
-
-  if (recordMessage) {
-    recordMessage.textContent = "선택한 전적이 입력창에 불러와졌습니다. 삭제할 수 있습니다.";
-  }
-
-  renderRecords();
-}
-
-function clearRecordInputs() {
-  const recordDate = document.getElementById("recordDate");
-  const recordType = document.getElementById("recordType");
-  const recordResult = document.getElementById("recordResult");
-  const recordBalance = document.getElementById("recordBalance");
-  const recordPureKills = document.getElementById("recordPureKills");
-  const recordMessage = document.getElementById("recordMessage");
-
-  if (recordDate) recordDate.value = "";
-  if (recordType) recordType.value = "킬내기";
-  if (recordResult) recordResult.value = "승리";
-  if (recordBalance) recordBalance.value = "";
-  if (recordPureKills) recordPureKills.value = "";
-
-  fillTeamInputs("myTeam", []);
-  fillTeamInputs("enemyTeam", []);
-
-  selectedRecordId = null;
-  setDefaultRecordDate();
-
-  if (recordMessage) {
-    recordMessage.textContent = "입력값을 초기화했습니다.";
-  }
-
-  renderRecords();
-}
-
-async function saveRecord() {
-  if (!requireAdmin("전적 저장")) return;
-
-  const date = document.getElementById("recordDate")?.value || "";
-  const type = document.getElementById("recordType")?.value || "킬내기";
-  const result = document.getElementById("recordResult")?.value || "승리";
-  const balance = document.getElementById("recordBalance")?.value.trim() || "";
-  const pureKills = document.getElementById("recordPureKills")?.value ?? "";
-
-  const myTeam = getFilledTeamMembers("myTeam");
-  const enemyTeam = getFilledTeamMembers("enemyTeam");
-
-  if (!date) {
-    alert("날짜를 입력해주세요.");
-    return;
-  }
-
-  if (pureKills === "" || Number.isNaN(Number(pureKills))) {
-    alert("순수킬을 숫자로 입력해주세요.");
-    return;
-  }
-
-  if (myTeam.length < MIN_RECORD_TEAM_SIZE || myTeam.length > MAX_RECORD_TEAM_SIZE) {
-    alert(`우리 팀은 ${MIN_RECORD_TEAM_SIZE}명 이상 ${MAX_RECORD_TEAM_SIZE}명 이하로 입력해주세요.`);
-    return;
-  }
-
-  if (enemyTeam.length < MIN_RECORD_TEAM_SIZE || enemyTeam.length > MAX_RECORD_TEAM_SIZE) {
-    alert(`상대 팀은 ${MIN_RECORD_TEAM_SIZE}명 이상 ${MAX_RECORD_TEAM_SIZE}명 이하로 입력해주세요.`);
-    return;
-  }
-
-  if (myTeam.length !== enemyTeam.length) {
-    alert("우리 팀과 상대 팀의 인원 수는 같아야 합니다.");
-    return;
-  }
-
-  try {
-    await addDoc(recordsCollection, {
-      date,
-      type,
-      result,
-      balance,
-      pureKills: Number(pureKills),
-      myTeam,
-      enemyTeam,
-      createdAt: Date.now()
-    });
-
-    setRecordTypeFilterValue(type);
-
-    clearRecordInputs();
-
-    const recordMessage = document.getElementById("recordMessage");
-    if (recordMessage) {
-      recordMessage.textContent = `${type} 전적을 저장했습니다. 아래 목록은 ${type} 기준으로 표시됩니다.`;
-    }
-  } catch (error) {
-    console.error(error);
-    alert("전적 저장 중 오류가 발생했습니다.");
+    const url=publicApiUrl("drawBroadcastRead");if(!url)throw new Error("송출 주소 설정이 없습니다.");
+    const data=await fetchJson(url);if(!data.ok)throw new Error(data.message||"송출 상태 조회 실패");applyBroadcastData(data);
+    nextDelay=1200
+  }catch(e){
+    console.error(e);
+    nextDelay=1600;
+    if(conn){conn.textContent="연결 오류";conn.className="error"}
+  }finally{
+    broadcastPollRunning=false;
+    scheduleNextBroadcastPoll(nextDelay)
   }
 }
-
-async function deleteSelectedRecord() {
-  if (!requireAdmin("전적 삭제")) return;
-
-  if (!selectedRecordId) {
-    alert("먼저 삭제할 전적을 하나 선택해주세요.");
-    return;
-  }
-
-  if (!confirm("선택한 전적을 삭제할까요?")) return;
-
-  try {
-    await deleteDoc(doc(db, "killRecords", selectedRecordId));
-    selectedRecordId = null;
-    clearRecordInputs();
-
-    const recordMessage = document.getElementById("recordMessage");
-    if (recordMessage) {
-      recordMessage.textContent = "선택한 전적을 삭제했습니다.";
-    }
-  } catch (error) {
-    console.error(error);
-    alert("전적 삭제 중 오류가 발생했습니다.");
-  }
+function initializeBroadcastView(){
+  document.body.classList.add("broadcast-mode");
+  if(BROADCAST_LAYOUT==="mini")document.body.classList.add("broadcast-mini");
+  document.title=`제리츄 뽑기판 · ${BROADCAST_LAYOUT==="mini"?"미니 ":""}송출 화면`;
+  $("#broadcastTopbar")?.classList.remove("hidden");
+  renderAll();
+  clearTimeout(broadcastPollTimer);
+  loadBroadcastState();
+  loadBroadcastPulse()
 }
 
-function setDefaultRecordDate() {
-  const recordDate = document.getElementById("recordDate");
-  if (!recordDate) return;
-
-  const today = new Date();
-  recordDate.value =
-    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-}
-
-/* =========================
-   전적 상세
-========================= */
-
-function normalizeMembers(members) {
-  if (!Array.isArray(members)) return [];
-  return members
-    .map((v) => String(v || "").trim())
-    .filter((v) => v !== "");
-}
-
-function calcRate(wins, total) {
-  if (!total) return "0.00%";
-  return ((wins / total) * 100).toFixed(2) + "%";
-}
-
-function summarizeRecordList(list) {
-  const wins = list.filter((item) => item.result === "승리").length;
-  const losses = list.filter((item) => item.result === "패배").length;
-  const total = wins + losses;
-
-  return {
-    wins,
-    losses,
-    total,
-    rate: calcRate(wins, total)
-  };
-}
-
-function makeStatsTable(headers, rows) {
-  if (!rows.length) {
-    return `<div class="empty-stats">표시할 데이터가 없습니다.</div>`;
-  }
-
-  const thead = `
-    <thead>
-      <tr>
-        ${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}
-      </tr>
-    </thead>
-  `;
-
-  const tbody = `
-    <tbody>
-      ${rows.map((row) => `
-        <tr>
-          ${row.map((cell) => `<td>${escapeHtml(String(cell))}</td>`).join("")}
-        </tr>
-      `).join("")}
-    </tbody>
-  `;
-
-  return `<div class="stats-table-wrap"><table class="stats-table">${thead}${tbody}</table></div>`;
-}
-
-function renderBalanceStats() {
-  const target = document.getElementById("detailBalanceTable");
-  if (!target) return;
-
-  const killOnlyRecords = recordsCache.filter((item) => item.type === "킬내기");
-
-  if (!killOnlyRecords.length) {
-    target.innerHTML = `<div class="empty-stats">킬내기 전적이 없습니다.</div>`;
-    return;
-  }
-
-  const balanceGroups = {};
-
-  killOnlyRecords.forEach((item) => {
-    const key = (item.balance || "미입력").trim() || "미입력";
-    if (!balanceGroups[key]) balanceGroups[key] = [];
-    balanceGroups[key].push(item);
-  });
-
-  const rows = Object.keys(balanceGroups)
-    .sort((a, b) => a.localeCompare(b, "ko"))
-    .map((key) => {
-      const stat = summarizeRecordList(balanceGroups[key]);
-      return [key, `${stat.wins}승 ${stat.losses}패`, stat.rate];
-    });
-
-  target.innerHTML = makeStatsTable(["밸런스", "전적", "승률"], rows);
-}
-
-function isThisMonth(dateStr) {
-  if (!dateStr) return false;
-
-  const date = new Date(dateStr);
-  const now = new Date();
-
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth()
-  );
-}
-
-function renderMonthStats() {
-  const target = document.getElementById("detailMonthTable");
-  if (!target) return;
-
-  const monthRecords = recordsCache.filter((item) => isThisMonth(item.date));
-
-  const kill = summarizeRecordList(monthRecords.filter((item) => item.type === "킬내기"));
-  const land = summarizeRecordList(monthRecords.filter((item) => item.type === "랜드"));
-  const gkl = summarizeRecordList(monthRecords.filter((item) => item.type === "GKL"));
-  const factory = summarizeRecordList(monthRecords.filter((item) => item.type === "공장"));
-
-  const rows = [
-    ["킬내기", `${kill.wins}승 ${kill.losses}패`, kill.rate],
-    ["랜드", `${land.wins}승 ${land.losses}패`, land.rate],
-    ["GKL", `${gkl.wins}승 ${gkl.losses}패`, gkl.rate],
-    ["공장", `${factory.wins}승 ${factory.losses}패`, factory.rate]
-  ];
-
-  target.innerHTML = makeStatsTable(["이번 달 항목", "전적", "승률"], rows);
-}
-
-function renderMapStats() {
-  const target = document.getElementById("detailMapTable");
-  if (!target) return;
-
-  const rows = ["킬내기", "랜드", "GKL", "공장"].map((type) => {
-    const stat = summarizeRecordList(recordsCache.filter((item) => item.type === type));
-    return [type, `${stat.wins}승 ${stat.losses}패`, stat.rate];
-  });
-
-  target.innerHTML = makeStatsTable(["종류", "전적", "승률"], rows);
-}
-
-function renderDetailPage() {
-  const balanceEl = document.getElementById("detailBalanceTable");
-  const monthEl = document.getElementById("detailMonthTable");
-  const mapEl = document.getElementById("detailMapTable");
-  const relationEl = document.getElementById("memberRelationTable");
-
-  if (!balanceEl || !monthEl || !mapEl || !relationEl) return;
-
-  renderBalanceStats();
-  renderMonthStats();
-  renderMapStats();
-
-  const input = document.getElementById("memberRelationInput");
-  if (input && input.value.trim()) {
-    renderMemberRelationStats();
-  } else {
-    relationEl.innerHTML = `<div class="empty-stats">비교할 멤버를 검색해 주세요.</div>`;
-  }
-}
-
-function clearMemberRelationStats() {
-  const input = document.getElementById("memberRelationInput");
-  if (input) input.value = "";
-
-  const summary = document.getElementById("memberRelationSummary");
-  const table = document.getElementById("memberRelationTable");
-
-  if (summary) {
-    summary.textContent = "비교할 멤버 이름을 입력해 주세요. (수힛 기준)";
-  }
-
-  if (table) {
-    table.innerHTML = `<div class="empty-stats">비교할 멤버를 검색해 주세요.</div>`;
-  }
-}
-
-function getBasePerspectiveResult(record) {
-  const myTeam = normalizeMembers(record.myTeam);
-  const enemyTeam = normalizeMembers(record.enemyTeam);
-
-  const baseInMy = myTeam.includes(RELATION_BASE_MEMBER);
-  const baseInEnemy = enemyTeam.includes(RELATION_BASE_MEMBER);
-
-  if (!baseInMy && !baseInEnemy) return null;
-
-  const myTeamWon = record.result === "승리";
-
-  if (baseInMy) return myTeamWon ? "승리" : "패배";
-  return myTeamWon ? "패배" : "승리";
-}
-
-function renderMemberRelationStats() {
-  const input = document.getElementById("memberRelationInput");
-  const targetName = input ? input.value.trim() : "";
-
-  if (!targetName) {
-    clearMemberRelationStats();
-    return;
-  }
-
-  if (targetName === RELATION_BASE_MEMBER) {
-    const summary = document.getElementById("memberRelationSummary");
-    const table = document.getElementById("memberRelationTable");
-
-    if (summary) {
-      summary.textContent =
-        `기준 멤버는 이미 ${RELATION_BASE_MEMBER}로 고정되어 있습니다. 비교할 다른 멤버를 입력해 주세요.`;
-    }
-
-    if (table) {
-      table.innerHTML = `<div class="empty-stats">${RELATION_BASE_MEMBER}이 아닌 다른 멤버를 입력해 주세요.</div>`;
-    }
-    return;
-  }
-
-  let sameWins = 0;
-  let sameLosses = 0;
-  let enemyWins = 0;
-  let enemyLosses = 0;
-  let relatedMatchCount = 0;
-
-  recordsCache.forEach((record) => {
-    const myTeam = normalizeMembers(record.myTeam);
-    const enemyTeam = normalizeMembers(record.enemyTeam);
-
-    const baseInMy = myTeam.includes(RELATION_BASE_MEMBER);
-    const baseInEnemy = enemyTeam.includes(RELATION_BASE_MEMBER);
-    const targetInMy = myTeam.includes(targetName);
-    const targetInEnemy = enemyTeam.includes(targetName);
-
-    if (!(baseInMy || baseInEnemy)) return;
-    if (!(targetInMy || targetInEnemy)) return;
-
-    const baseResult = getBasePerspectiveResult(record);
-    if (!baseResult) return;
-
-    relatedMatchCount++;
-
-    const sameTeam =
-      (baseInMy && targetInMy) ||
-      (baseInEnemy && targetInEnemy);
-
-    const versusTeam =
-      (baseInMy && targetInEnemy) ||
-      (baseInEnemy && targetInMy);
-
-    if (sameTeam) {
-      if (baseResult === "승리") sameWins++;
-      else sameLosses++;
-    }
-
-    if (versusTeam) {
-      if (baseResult === "승리") enemyWins++;
-      else enemyLosses++;
-    }
-  });
-
-  const summary = document.getElementById("memberRelationSummary");
-  const table = document.getElementById("memberRelationTable");
-
-  if (!relatedMatchCount) {
-    if (summary) {
-      summary.textContent = `${RELATION_BASE_MEMBER} 기준으로 ${targetName}와 함께 계산할 전적이 없습니다.`;
-    }
-
-    if (table) {
-      table.innerHTML = `<div class="empty-stats">관계 데이터를 찾지 못했습니다.</div>`;
-    }
-    return;
-  }
-
-  const sameTotal = sameWins + sameLosses;
-  const enemyTotal = enemyWins + enemyLosses;
-
-  if (summary) {
-    summary.textContent = `${RELATION_BASE_MEMBER} 기준 / 비교 멤버: ${targetName}`;
-  }
-
-  const rows = [[
-    targetName,
-    `${sameTotal}경기`,
-    `${sameWins}승 ${sameLosses}패`,
-    calcRate(sameWins, sameTotal),
-    `${enemyTotal}경기`,
-    `${enemyWins}승 ${enemyLosses}패`,
-    calcRate(enemyWins, enemyTotal)
-  ]];
-
-  if (table) {
-    table.innerHTML = makeStatsTable(
-      ["멤버", "같은 팀 경기", "같은 팀 전적", "같은 팀 승률", "적팀 경기", "적팀 전적", "적팀 승률"],
-      rows
-    );
-  }
-}
-
-/* =========================
-   초기화
-========================= */
-
-applySavedTheme();
-updateAdminButton();
-loadHeroImage();
-
-loadTeamMode();
-loadPlayers();
-loadLocks();
-applyTeamModeUI();
-
-loadMapSelectionState();
-renderMapBoard();
-loadSavedMap();
-
-setDefaultRecordDate();
-startScheduleSync();
-startRecordSync();
-clearMemberRelationStats();
+$("#confirmDrawBtn").onclick=performDraw;$("#randomDraw1Btn").onclick=()=>randomDraw(1);$("#randomDraw5Btn").onclick=()=>randomDraw(5);$("#randomDraw11Btn").onclick=()=>randomDraw(11);$("#copyBroadcastUrlBtn").onclick=()=>copyBroadcastUrl("full");$("#copyMiniBroadcastUrlBtn").onclick=()=>copyBroadcastUrl("mini");$("#startSessionBtn").onclick=startDrawSession;$("#endSessionBtn").onclick=endDrawSession;$("#settingsBtn").onclick=()=>{renderSettings();updateSettingsFooter($(".settings-tab.active")?.dataset.tab||"boardSettings");openModal("settingsModal")};$("#emptySettingsBtn").onclick=()=>{renderSettings();updateSettingsFooter($(".settings-tab.active")?.dataset.tab||"boardSettings");openModal("settingsModal")};$("#previewBtn").onclick=()=>{renderPreview();openModal("previewModal")};$("#resetProgressBtn").onclick=resetProgress;$("#copyWinnersBtn").onclick=copyWinnerHistory;$("#clearHistoryBtn").onclick=clearHistory;$("#addPrizeBtn").onclick=addPrizeRow;$("#saveSettingsBtn").onclick=saveSettingsOnly;$("#generateBoardBtn").onclick=generateFromSettings;$("#exportCsvBtn").onclick=exportCsv;$("#syncNowBtn").onclick=()=>{if(!state.session?.active){alert("먼저 뽑기 시작 버튼을 눌러 주세요.");return}syncGifts()};$("#testConnectionBtn").onclick=()=>testConnection(true);
+$("#manualQueueBtn").onclick=()=>openModal("manualQueueModal");$("#manualQueueAddBtn").onclick=()=>{const n=$("#manualNickname").value.trim(),d=$("#manualDraws").value,m=$("#manualMemo").value.trim();if(addQueueEntry({nickname:n,draws:d,memo:m})){closeModal("manualQueueModal");$("#manualNickname").value="";$("#manualDraws").value=1;$("#manualMemo").value=""}};
+$("#targetMinusBtn").onclick=()=>{const c=currentTarget();if(c){c.remaining=Math.max(0,c.remaining-1);saveState();renderQueue()}};$("#targetPlusBtn").onclick=()=>{const c=currentTarget();if(c){c.remaining++;c.total++;saveState();renderQueue()}};$("#targetSkipBtn").onclick=()=>{const c=currentTarget();if(c){state.queue=state.queue.filter(x=>x.id!==c.id);state.queue.push(c);saveState();renderQueue()}};$("#targetRemoveBtn").onclick=()=>{const c=currentTarget();if(c&&confirm(`${c.nickname} 님을 대기열에서 삭제할까요?`)){state.queue=state.queue.filter(x=>x.id!==c.id);saveState();renderQueue()}};
+function updateSettingsFooter(tabId){const scroll=$(".settings-scroll"),save=$("#saveSettingsBtn"),generate=$("#generateBoardBtn");if(scroll)scroll.scrollTop=0;if(tabId==="soopSettings"){save.textContent="연동 설정 저장";generate.classList.add("hidden")}else if(tabId==="soundSettings"){save.textContent="효과음 설정 저장";generate.classList.add("hidden")}else{save.textContent="설정만 저장";generate.classList.remove("hidden")}}
+$$(".settings-tab").forEach(t=>t.onclick=()=>{$$(".settings-tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");$$(".settings-tab-panel").forEach(x=>x.classList.add("hidden"));document.getElementById(t.dataset.tab).classList.remove("hidden");updateSettingsFooter(t.dataset.tab)});
+$$('input[name="ruleMode"]').forEach(x=>x.onchange=updateRulePanels);$("#addRangeRuleBtn").onclick=()=>{$("#rangeRuleEditor").insertAdjacentHTML("beforeend",`<div class="range-rule-row"><input class="range-min" type="number" min="0" value="0"><span>~</span><input class="range-max" type="number" min="0" placeholder="제한 없음"><span>→</span><input class="range-draws" type="number" min="0" value="1"><button class="rule-delete">×</button></div>`);bindRuleDeletes()};$("#addExactRuleBtn").onclick=()=>{$("#exactRuleEditor").insertAdjacentHTML("beforeend",`<div class="exact-rule-row"><input class="exact-count" type="number" min="0" value="500"><span>개 →</span><input class="exact-draws" type="number" min="0" value="1"><button class="rule-delete">×</button></div>`);bindRuleDeletes()};
+$("#testBalloonCount").oninput=updateTestDrawResult;["ratioBalloons","ratioDraws","soopMaxDraws"].forEach(id=>$("#"+id).oninput=updateTestDrawResult);$("#testAddQueueBtn").onclick=()=>{const count=Number($("#testBalloonCount").value)||0,draws=calculateDraws(count,getDraftIntegration());if(draws>0)addQueueEntry({nickname:"연동 테스트",draws,source:"manual",balloonCount:count,memo:`별풍선 ${count.toLocaleString()}개 계산 테스트`})};$("#soundVolume").oninput=updateSoundVolumeLabel;$$('[data-sound-test]').forEach(button=>button.onclick=()=>testSoundEffect(button.dataset.soundTest));
+["settingTotal","settingColumns","settingLoseText","settingTitle","settingSubtitle","soopEnabled","soopExecUrl"].forEach(id=>$("#"+id).addEventListener("input",updateSettingsSummary));$$("[data-close]").forEach(b=>b.onclick=()=>closeModal(b.dataset.close));$$(".modal-backdrop").forEach(m=>m.onclick=e=>{if(e.target===m)closeModal(m.id)});document.addEventListener("keydown",e=>{if(e.key==="Escape")$$(".modal-backdrop:not(.hidden)").forEach(m=>closeModal(m.id))});
+preloadSoundEffects();if(IS_BROADCAST_VIEW){initializeBroadcastView()}else{state.settings.integration.enabled=false;state.session.active=false;state.queue=[];localStorage.setItem(STORAGE_KEY,JSON.stringify(state));renderAll();setTimeout(()=>scheduleBroadcastPublish(true),700)}

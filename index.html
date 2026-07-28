@@ -1,424 +1,267 @@
 <!DOCTYPE html>
+
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SUWEET TOOL</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="#7cc7ff" name="theme-color"/>
+<title>제리츄 뽑기판</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Dekko&amp;display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/gh/sun-typeface/SUITE@2/fonts/static/woff2/SUITE.css" rel="stylesheet"/>
+<link href="style.css" rel="stylesheet"/>
 </head>
 <body>
-  <div class="app">
-    <div id="homePage" class="page active">
-      <div class="card">
-        <div class="top-bar home-top-bar">
-          <button class="secondary sheet-link-btn" onclick="openSheetLinks()">시트지 모음 ↗</button>
-          <button class="secondary" onclick="toggleDarkMode()" id="themeToggleBtn">다크모드</button>
-          <button class="secondary" onclick="toggleAdminLock()" id="adminToggleBtn">관리자 잠금 해제</button>
-        </div>
+<div class="page-shell">
+<header class="hero">
+<div class="hero-copy">
+<div class="eyebrow">JERRYCHU LUCKY DRAW</div>
+<h1 id="displayTitle">제리츄 뽑기판</h1>
+<p id="displaySubtitle">오늘의 행운을 뽑아보세요!</p>
+<div class="hero-stats">
+<div class="stat-card"><span>남은 뽑기</span><strong><b id="remainingCount">0</b> / <b id="totalCount">0</b></strong></div>
+<div class="stat-card"><span>당첨 남음</span><strong id="winningRemaining">0</strong></div>
+<div class="stat-card"><span>진행률</span><strong id="progressText">0%</strong></div>
+</div>
+</div>
+<div aria-label="캐릭터 마스코트" class="mascot-wrap">
+<div class="mascot-glow"></div>
+<div class="mascot-card">
+<img alt="제리츄 뽑기판 마스코트 캐릭터" class="mascot-image" src="assets/mascot-character.png"/>
+<div class="mascot-badge">JERRYCHU PICK</div>
+</div>
+<div class="floating-chip chip-a">★</div><div class="floating-chip chip-b">LUCKY</div><div class="floating-chip chip-c">PICK</div>
+</div>
+</header>
+<main>
+<section class="broadcast-topbar glass-card hidden" id="broadcastTopbar">
+<div class="broadcast-brand">
+<span class="broadcast-live-dot"></span>
+<div>
+<span class="mini-label">JERRYCHU LIVE DRAW</span>
+<h1 id="broadcastTitle">제리츄 뽑기판</h1>
+</div>
+</div>
+<div class="broadcast-current">
+<span>현재 뽑기 대상</span>
+<strong id="broadcastCurrentTarget">대기 중</strong>
+<small id="broadcastCurrentMeta">후원 대기열을 기다리고 있습니다.</small>
+</div>
+<div class="broadcast-stats">
+<div><span>남은 칸</span><strong id="broadcastRemaining">0</strong></div>
+<div><span>대기 인원</span><strong id="broadcastQueueCount">0명</strong></div>
+<div><span>송출 상태</span><strong id="broadcastConnectionText">연결 중</strong></div>
+</div>
+</section>
+<section class="control-row glass-card">
+<div class="participant-field">
+<label for="participantName">이번 뽑기 당첨자</label>
+<input id="participantName" maxlength="24" placeholder="당첨자 이름을 입력해 주세요" type="text"/>
+</div>
+<div class="sync-compact legacy-soop-ui">
+<span class="status-dot off" id="syncStatusDot"></span>
+<div><small>SOOP 연동</small><strong id="syncStatusText">사용 안 함</strong></div>
+<button class="icon-sync" id="syncNowBtn" title="지금 동기화">↻</button>
+</div>
+<div class="control-actions">
+<button class="btn broadcast-copy" id="copyBroadcastUrlBtn">📺 전체 송출 주소</button>
+<button class="btn broadcast-copy mini-broadcast-copy" id="copyMiniBroadcastUrlBtn">🪟 미니 송출 주소</button>
+<button class="btn secondary" id="settingsBtn">⚙ 관리 설정</button>
+<button class="btn secondary" id="previewBtn">👀 결과 미리보기</button>
+<button class="btn danger-outline" id="resetProgressBtn">↺ 진행 초기화</button>
+</div>
+</section>
+<section class="session-panel glass-card legacy-soop-ui">
+<div class="session-status-wrap">
+<span class="session-status-dot standby" id="sessionStatusDot"></span>
+<div class="session-copy">
+<span class="mini-label">DRAW SESSION</span>
+<h2 id="sessionStatusTitle">뽑기 시작 대기</h2>
+<p id="sessionStatusDescription">뽑기판을 만든 뒤 시작 버튼을 누르면, 그 시점 이후에 저장된 후원만 읽어옵니다.</p>
+<div class="session-meta">
+<span id="sessionStartedAt">시작 시각: -</span>
+<span id="sessionBaseRow">수신 기준: -</span>
+</div>
+</div>
+</div>
+<div class="session-actions">
+<button class="btn primary session-start-btn" id="startSessionBtn">▶ 뽑기 시작</button>
+<button class="btn danger-outline" disabled="" id="endSessionBtn">■ 후원 수신 종료</button>
+</div>
+</section>
+<section class="queue-panel glass-card legacy-soop-ui">
+<div class="queue-current">
+<div class="section-heading compact">
+<div><span class="mini-label">CURRENT PLAYER</span><h2>현재 뽑기 대상</h2></div>
+<button class="btn secondary small" id="manualQueueBtn">＋ 수동 추가</button>
+</div>
+<div class="current-target-card empty-target" id="currentTargetCard">
+<div class="target-avatar"><img alt="캐릭터" src="assets/mascot-character.png"/></div>
+<div class="target-info"><span>대기 중</span><strong>등록된 뽑기 대상이 없습니다.</strong><small>직접 이름을 입력하거나 SOOP 연동으로 불러오세요.</small></div>
+</div>
+<div class="target-actions hidden" id="currentTargetActions">
+<button class="mini-action" id="targetMinusBtn">− 1회</button>
+<button class="mini-action" id="targetPlusBtn">＋ 1회</button>
+<button class="mini-action" id="targetSkipBtn">뒤로 보내기</button>
+<button class="mini-action danger" id="targetRemoveBtn">삭제</button>
+</div>
+</div>
+<div class="queue-list-box">
+<div class="section-heading compact"><div><span class="mini-label">WAITING QUEUE</span><h3>뽑기 대기열</h3></div><span class="queue-count" id="queueCountBadge">0명</span></div>
+<div class="draw-queue-list" id="drawQueueList"><div class="empty-state">대기 중인 후원이 없습니다.</div></div>
+</div>
+</section>
+<section class="content-grid">
+<aside class="prize-panel glass-card">
+<div class="section-heading"><div><span class="mini-label">PRIZE LIST</span><h2>당첨 목록</h2></div><span class="mascot-mini-frame"><img alt="마스코트 미리보기" src="assets/mascot-character.png"/></span></div>
+<div class="prize-list" id="prizeList"></div>
+<div class="recent-box">
+<div class="section-heading compact"><h3>최근 결과</h3><div class="recent-actions"><button class="text-btn copy-winners-btn" id="copyWinnersBtn">당첨자 복사</button><button class="text-btn" id="clearHistoryBtn">기록 지우기</button></div></div>
+<div class="recent-history" id="recentHistory"><div class="empty-state">아직 뽑기 기록이 없어요.</div></div>
+</div>
+</aside>
+<section class="board-area glass-card">
+<div class="board-topline"><div><span class="mini-label">PICK A NUMBER</span><h2>번호를 골라주세요</h2></div><div class="random-draw-wrap">
+<div aria-label="랜덤 추첨" class="random-draw-actions">
+<button class="btn random-draw-btn random-one" id="randomDraw1Btn" type="button">🎲 랜덤 1개</button>
+<button class="btn random-draw-btn random-five" id="randomDraw5Btn" type="button">🎲 랜덤 5개</button>
+<button class="btn random-draw-btn random-eleven" id="randomDraw11Btn" type="button">🎲 랜덤 11개</button>
+</div>
+<span aria-live="polite" class="random-draw-status" id="randomDrawStatus"></span>
+</div><div class="progress-bar-wrap"><div class="progress-bar"><span id="progressBar"></span></div></div></div>
+<div aria-live="polite" class="draw-board" id="drawBoard"></div>
+<div aria-label="등수별 남은 당첨 수량" class="broadcast-prize-strip hidden" id="broadcastPrizeStrip"></div>
+<div class="board-empty hidden" id="boardEmpty"><div class="empty-char-wrap"><img alt="캐릭터" class="empty-char" src="assets/mascot-character.png"/></div><h3>뽑기판이 아직 만들어지지 않았어요.</h3><p>관리 설정에서 당첨 항목을 입력하고 뽑기판을 생성해 주세요.</p><button class="btn primary" id="emptySettingsBtn">뽑기판 만들기</button></div>
+</section>
+<aside aria-label="송출용 당첨 정보 패널" class="broadcast-side-panel glass-card hidden" id="broadcastSidePanel">
+<div class="broadcast-side-header">
+<span class="mini-label">PRIZE GUIDE</span>
+<h2 id="broadcastSideTitle">제리츄 뽑기판</h2>
+<p>당첨 목록과 남은 수량</p>
+</div>
+<div class="broadcast-prize-panel-list" id="broadcastPrizePanelList"></div>
+</aside>
+</section>
+</main>
+</div>
+<div class="modal-backdrop hidden" id="confirmModal"><div class="modal small-modal"><button class="modal-close" data-close="confirmModal">×</button><div class="confirm-number" id="confirmNumber">001</div><h2>이 번호를 뽑을까요?</h2><p id="confirmParticipant">주인공: 이름 없음</p><div class="modal-actions"><button class="btn secondary" data-close="confirmModal">취소</button><button class="btn primary" id="confirmDrawBtn">뽑기!</button></div></div></div>
+<div class="modal-backdrop hidden" id="resultModal"><div class="modal result-modal" id="resultModalCard"><button class="modal-close" data-close="resultModal">×</button><div class="result-character-wrap"><img alt="결과 캐릭터" class="result-character" src="assets/mascot-character.png"/></div><div class="result-emoji" id="resultEmoji">🎉</div><div class="result-rank" id="resultRank">1등</div><h2 id="resultPrize">당첨!</h2><p id="resultMessage">축하합니다!</p><div class="result-meta" id="resultMeta"></div><button class="btn primary wide" data-close="resultModal">확인</button></div></div>
 
-        <div class="hero-badge">SUWEET TOOL</div>
-
-        <div class="hero-image-wrap">
-          <img
-            id="heroImage"
-            class="hero-image"
-            alt="메인 이미지"
-            src="https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80"
-          />
-        </div>
-
-        <div class="image-upload-row">
-          <label
-            class="mini-glass-btn"
-            for="heroImageInput"
-            onclick="return requireAdmin('이미지 변경')"
-          >이미지 추가</label>
-          <button class="mini-glass-btn" onclick="resetHeroImage()">이미지 초기화</button>
-          <input
-            id="heroImageInput"
-            class="hidden-file-input"
-            type="file"
-            accept="image/*"
-            onchange="handleHeroImageUpload(event)"
-          />
-        </div>
-
-        <h1>메인 페이지</h1>
-        <div class="desc">
-          원하는 메뉴를 눌러 해당 기능으로 이동하세요.<br />
-          팀 섞기, 스케줄, 전적 기록, 전적 상세를 한 번에 관리할 수 있습니다.
-        </div>
-
-        <div class="menu-grid">
-          <button class="menu-btn" onclick="showPage('teamPage')">팀 섞기</button>
-          <button class="menu-btn" onclick="showPage('schedulePage')">스케줄</button>
-          <button class="menu-btn" onclick="showPage('recordPage')">전적 기록</button>
-          <button class="menu-btn" onclick="showPage('detailPage')">전적 상세</button>
-        </div>
-      </div>
+<div class="modal-backdrop hidden" id="batchResultModal">
+  <div class="modal batch-result-modal" id="batchResultModalCard">
+    <div class="batch-result-header">
+      <span class="batch-result-icon">🎲</span>
+      <div><span class="mini-label">RANDOM DRAW RESULT</span><h2 id="batchResultTitle">랜덤 추첨 결과</h2></div>
     </div>
-
-    <div id="teamPage" class="page">
-      <div class="card">
-        <div class="top-bar">
-          <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-        </div>
-
-        <div class="team-layout">
-          <div class="team-left-panel">
-            <h2>팀 섞기</h2>
-
-            <div class="desc team-desc">
-              선택한 인원 모드에 맞춰 플레이어를 입력하세요.<br />
-              입력 순서대로 2명씩 같은 티어로 인식합니다. (1-2 / 3-4 / 5-6 / 7-8 / 9-10 / 11-12)<br />
-              플레이어 2, 4, 6, 8, 10, 12 옆의 🔒 / 🔓 버튼으로 각 페어를 같은 팀으로 고정할 수 있습니다.
-            </div>
-
-            <div class="team-player-grid">
-              <div class="player-row">
-                <input type="text" id="player1" placeholder="플레이어 1" />
-              </div>
-              <div class="player-row player-row-lock">
-                <input type="text" id="player2" placeholder="플레이어 2" />
-                <button type="button" class="lock-btn" id="lock2" data-locked="false" onclick="togglePairLock(2)">🔓</button>
-              </div>
-
-              <div class="player-row">
-                <input type="text" id="player3" placeholder="플레이어 3" />
-              </div>
-              <div class="player-row player-row-lock">
-                <input type="text" id="player4" placeholder="플레이어 4" />
-                <button type="button" class="lock-btn" id="lock4" data-locked="false" onclick="togglePairLock(4)">🔓</button>
-              </div>
-
-              <div class="player-row">
-                <input type="text" id="player5" placeholder="플레이어 5" />
-              </div>
-              <div class="player-row player-row-lock">
-                <input type="text" id="player6" placeholder="플레이어 6" />
-                <button type="button" class="lock-btn" id="lock6" data-locked="false" onclick="togglePairLock(6)">🔓</button>
-              </div>
-
-              <div class="player-row">
-                <input type="text" id="player7" placeholder="플레이어 7" />
-              </div>
-              <div class="player-row player-row-lock">
-                <input type="text" id="player8" placeholder="플레이어 8" />
-                <button type="button" class="lock-btn" id="lock8" data-locked="false" onclick="togglePairLock(8)">🔓</button>
-              </div>
-
-              <div class="player-row">
-                <input type="text" id="player9" placeholder="플레이어 9" />
-              </div>
-              <div class="player-row player-row-lock">
-                <input type="text" id="player10" placeholder="플레이어 10" />
-                <button type="button" class="lock-btn" id="lock10" data-locked="false" onclick="togglePairLock(10)">🔓</button>
-              </div>
-
-              <div class="player-row">
-                <input type="text" id="player11" placeholder="플레이어 11 (선택)" />
-              </div>
-              <div class="player-row player-row-lock">
-                <input type="text" id="player12" placeholder="플레이어 12 (선택)" />
-                <button type="button" class="lock-btn" id="lock12" data-locked="false" onclick="togglePairLock(12)">🔓</button>
-              </div>
-            </div>
-
-            <div class="btn-row">
-              <button class="primary" onclick="shuffleTeams()">팀 섞기</button>
-              <button class="secondary" onclick="copyTeams()">복사</button>
-              <button class="secondary" onclick="resetPlayers()">멤버 초기화</button>
-            </div>
-
-            <div class="teams">
-              <div class="team-box">
-                <div class="team-title">블루</div>
-                <ul id="team1"></ul>
-              </div>
-              <div class="team-box">
-                <div class="team-title">레드</div>
-                <ul id="team2"></ul>
-              </div>
-            </div>
-
-            <div class="message" id="teamMessage">
-              직전 결과와 완전히 같은 줄 없이, 최소 2라인 이상 다르게 섞습니다.
-            </div>
-          </div>
-
-          <div class="team-right-panel">
-            <div class="side-card">
-              <h3 class="side-title">인원 모드 선택</h3>
-              <div class="side-desc">팀 섞기 인원을 선택하세요.</div>
-
-              <div class="mode-card-grid">
-                <button type="button" id="mode5Btn" class="mode-card active" onclick="setTeamMode(10)">
-                  <strong>5 vs 5</strong>
-                  <span>총 10명</span>
-                  <span>5명씩 팀 구성</span>
-                </button>
-
-                <button type="button" id="mode6Btn" class="mode-card" onclick="setTeamMode(12)">
-                  <strong>6 vs 6</strong>
-                  <span>총 12명</span>
-                  <span>6명씩 팀 구성</span>
-                </button>
-              </div>
-
-              <div class="message" id="teamModeInfo">현재 5 vs 5 모드입니다. 총 10명을 입력합니다.</div>
-            </div>
-
-            <div class="side-card">
-              <h3 class="side-title">맵 선택</h3>
-              <div class="side-desc">
-                체크 해제한 맵은 추첨에서 제외됩니다. 아무 것도 해제하지 않으면 전체 맵에서 그대로 추첨합니다.
-              </div>
-
-              <div id="mapBoard" class="map-board"></div>
-
-              <div class="btn-row">
-                <button class="primary" onclick="drawMap()">맵 추첨하기</button>
-                <button class="secondary" onclick="copyMap()">선택 맵 복사</button>
-                <button class="secondary" onclick="resetMap()">선택 초기화</button>
-              </div>
-
-              <div class="message" id="mapMessage">맵 추첨 버튼을 눌러주세요.</div>
-              <div id="mapResult" style="display:none;">-</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="schedulePage" class="page">
-      <div class="calendar-page">
-        <div class="calendar-top">
-          <div>
-            <div class="calendar-chip">SUWEET CALENDAR</div>
-            <h2 class="calendar-title">캘린더</h2>
-          </div>
-
-          <div class="calendar-actions">
-            <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-            <button class="primary" onclick="openScheduleFormForToday()">일정 등록</button>
-            <div class="calendar-chip" id="hitchaCount">이번달 힛차 0회</div>
-          </div>
-        </div>
-
-        <div class="calendar-nav">
-          <button onclick="changeMonth(-1)">◀</button>
-          <div class="calendar-label" id="calendarLabel">2026년 3월</div>
-          <button onclick="changeMonth(1)">▶</button>
-        </div>
-
-        <div class="calendar-toolbar">
-          <div class="calendar-legend">
-            <span><span class="legend-dot" style="background:#3b82f6"></span>방송</span>
-            <span><span class="legend-dot" style="background:#22c55e"></span>방송예정</span>
-            <span><span class="legend-dot" style="background:#06b6d4"></span>합방</span>
-            <span><span class="legend-dot" style="background:#ef4444"></span>힛차</span>
-            <span><span class="legend-dot" style="background:#a855f7"></span>기타</span>
-          </div>
-          <div class="calendar-chip">날짜를 누르면 해당 날짜로 바로 입력됩니다.</div>
-        </div>
-
-        <div class="calendar-grid">
-          <div class="calendar-weekdays">
-            <div class="weekday">일</div>
-            <div class="weekday">월</div>
-            <div class="weekday">화</div>
-            <div class="weekday">수</div>
-            <div class="weekday">목</div>
-            <div class="weekday">금</div>
-            <div class="weekday">토</div>
-          </div>
-          <div class="calendar-days" id="calendarDays"></div>
-        </div>
-
-        <div class="calendar-panel">
-          <h3>일정 등록 / 수정</h3>
-
-          <div class="event-form">
-            <input type="date" id="scheduleDate" />
-            <input type="time" id="scheduleTime" />
-            <select id="scheduleCategory">
-              <option value="방송">방송</option>
-              <option value="방송예정">방송예정</option>
-              <option value="합방">합방</option>
-              <option value="힛차">힛차</option>
-              <option value="기타">기타</option>
-            </select>
-            <input type="text" id="scheduleText" placeholder="예: 합방 / 개인방송 / 힛차 공지" />
-            <button class="primary" onclick="saveScheduleFromForm()">저장</button>
-            <button class="secondary" onclick="clearScheduleInputs()">초기화</button>
-          </div>
-
-          <div class="event-actions">
-            <button onclick="deleteSelectedSchedule()" class="danger">선택 일정 삭제</button>
-          </div>
-
-          <div class="message" id="scheduleMessage">스케줄은 Firebase에 공유 저장됩니다.</div>
-        </div>
-      </div>
-    </div>
-
-    <div id="recordPage" class="page">
-      <div class="card">
-        <div class="top-bar">
-          <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-        </div>
-
-        <h2>전적 기록</h2>
-        <div class="desc">
-          날짜, 종류, 승패, 팀원/상대팀, 맞밸런스, 순수킬을 Firebase에 공유 저장합니다.
-        </div>
-
-        <div class="record-summary record-summary-5">
-          <div class="summary-box">
-            <span>총 경기 수</span>
-            <strong id="recordTotalGames">0</strong>
-          </div>
-
-          <div class="summary-box">
-            <span>승리 (킬내기 / 종합)</span>
-            <strong id="recordWinBreakdown">0 / 0</strong>
-          </div>
-
-          <div class="summary-box">
-            <span>패배 (킬내기 / 종합)</span>
-            <strong id="recordLossBreakdown">0 / 0</strong>
-          </div>
-
-          <div class="summary-box">
-            <span>킬내기 승률</span>
-            <strong id="recordKillWinRate">0.00%</strong>
-          </div>
-
-          <div class="summary-box">
-            <span>종합 승률</span>
-            <strong id="recordOverallWinRate">0.00%</strong>
-          </div>
-        </div>
-
-        <div class="record-form-grid">
-          <input type="date" id="recordDate" />
-
-          <select id="recordType" onchange="syncRecordFilterWithInputType()">
-            <option value="킬내기">킬내기</option>
-            <option value="랜드">랜드</option>
-            <option value="공장">공장</option>
-            <option value="GKL">GKL</option>
-          </select>
-
-          <select id="recordResult">
-            <option value="승리">승리</option>
-            <option value="패배">패배</option>
-          </select>
-
-          <input type="text" id="recordBalance" placeholder="맞밸런스" />
-          <input type="number" id="recordPureKills" placeholder="순수킬 (음수 가능)" step="1" />
-        </div>
-
-        <h3 class="section-subtitle">우리 팀</h3>
-        <div class="record-team-grid">
-          <input type="text" id="myTeam1" placeholder="팀원 1" />
-          <input type="text" id="myTeam2" placeholder="팀원 2" />
-          <input type="text" id="myTeam3" placeholder="팀원 3" />
-          <input type="text" id="myTeam4" placeholder="팀원 4" />
-          <input type="text" id="myTeam5" placeholder="팀원 5" />
-          <input type="text" id="myTeam6" placeholder="팀원 6" />
-          <input type="text" id="myTeam7" placeholder="팀원 7" />
-          <input type="text" id="myTeam8" placeholder="팀원 8" />
-        </div>
-
-        <h3 class="section-subtitle">상대 팀</h3>
-        <div class="record-team-grid">
-          <input type="text" id="enemyTeam1" placeholder="상대팀 1" />
-          <input type="text" id="enemyTeam2" placeholder="상대팀 2" />
-          <input type="text" id="enemyTeam3" placeholder="상대팀 3" />
-          <input type="text" id="enemyTeam4" placeholder="상대팀 4" />
-          <input type="text" id="enemyTeam5" placeholder="상대팀 5" />
-          <input type="text" id="enemyTeam6" placeholder="상대팀 6" />
-          <input type="text" id="enemyTeam7" placeholder="상대팀 7" />
-          <input type="text" id="enemyTeam8" placeholder="상대팀 8" />
-        </div>
-
-        <div class="message record-help">
-          팀원과 상대팀은 각각 4명 이상, 8명 이하로 자유롭게 입력할 수 있습니다.
-        </div>
-
-        <div class="btn-row">
-          <button class="primary" onclick="saveRecord()">저장</button>
-          <button class="secondary" onclick="clearRecordInputs()">초기화</button>
-          <button class="danger" onclick="deleteSelectedRecord()">선택 전적 삭제</button>
-        </div>
-
-        <div class="message" id="recordMessage">전적 정보를 입력하고 저장 버튼을 눌러주세요.</div>
-
-        <div class="record-filter-row">
-          <div class="record-filter-title">전적 검색</div>
-          <select id="recordTypeFilter" onchange="renderRecords()">
-            <option value="전체">전체 종류</option>
-            <option value="킬내기">킬내기</option>
-            <option value="랜드">랜드</option>
-            <option value="공장">공장</option>
-            <option value="GKL">GKL</option>
-          </select>
-          <button class="primary" onclick="renderRecords()">검색</button>
-          <button class="secondary" onclick="resetRecordFilter()">전체 보기</button>
-          <span class="record-filter-count" id="recordFilterCount">전체 0개</span>
-        </div>
-
-        <div id="recordList" class="record-list"></div>
-      </div>
-    </div>
-
-    <div id="detailPage" class="page">
-      <div class="card">
-        <div class="top-bar">
-          <button class="secondary" onclick="showPage('homePage')">메인으로</button>
-          <button class="primary" onclick="renderDetailPage()">새로고침</button>
-        </div>
-
-        <h2>전적 상세</h2>
-        <div class="desc">
-          저장된 전적을 기준으로 밸런스별 승률, 이번 달 승률, 펀킬 및 다파전 승률, 야스오 추적기를 보여줍니다.
-        </div>
-
-        <div class="detail-grid">
-          <div class="detail-card">
-            <h3 class="detail-title">밸런스별 승률</h3>
-            <div id="detailBalanceTable"></div>
-          </div>
-
-          <div class="detail-card">
-            <h3 class="detail-title">이번 달 승률</h3>
-            <div id="detailMonthTable"></div>
-          </div>
-
-          <div class="detail-card full-span">
-            <h3 class="detail-title">펀킬 및 다파전 승률</h3>
-            <div id="detailMapTable"></div>
-          </div>
-
-          <div class="detail-card full-span relation-search-card">
-            <h3 class="detail-title small">야스오 추적기</h3>
-            <div class="detail-desc">수힛 기준으로 특정 멤버와 같은 팀 / 적팀 전적을 확인합니다.</div>
-
-            <div class="relation-search-row">
-              <input type="text" id="memberRelationInput" placeholder="비교할 멤버 이름 입력" />
-              <button class="primary" onclick="renderMemberRelationStats()">검색</button>
-              <button class="secondary" onclick="clearMemberRelationStats()">초기화</button>
-            </div>
-
-            <div class="message relation-message" id="memberRelationSummary">비교할 멤버 이름을 입력해 주세요. (수힛 기준)</div>
-            <div id="memberRelationTable"></div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div class="batch-result-summary" id="batchResultSummary">당첨 0개 · 꽝 0개</div>
+    <div class="batch-result-grid" id="batchResultGrid"></div>
   </div>
-
-  <script type="module" src="script.js"></script>
+</div>
+<div class="modal-backdrop hidden legacy-soop-ui" id="manualQueueModal"><div class="modal small-modal"><button class="modal-close" data-close="manualQueueModal">×</button><span class="mini-label">MANUAL QUEUE</span><h2>뽑기 대상 수동 추가</h2><div class="manual-form"><label><span>닉네임</span><input id="manualNickname" maxlength="24" placeholder="닉네임" type="text"/></label><label><span>뽑기 횟수</span><input id="manualDraws" max="999" min="1" type="number" value="1"/></label><label><span>메모</span><input id="manualMemo" maxlength="40" placeholder="선택 사항" type="text"/></label></div><button class="btn primary wide" id="manualQueueAddBtn">대기열에 추가</button></div></div>
+<div class="modal-backdrop hidden" id="settingsModal">
+<div class="modal settings-modal">
+<button class="modal-close" data-close="settingsModal">×</button>
+<div class="modal-header"><div><span class="mini-label">ADMIN SETTINGS</span><h2>제리츄 뽑기판 설정</h2></div><span class="settings-preview"><img alt="캐릭터 미리보기" src="assets/mascot-character.png"/></span></div>
+<div class="settings-tabs"><button class="settings-tab active" data-tab="boardSettings">뽑기판</button><button class="settings-tab" data-tab="soopSettings">송출 연동</button><button class="settings-tab" data-tab="soundSettings">효과음</button></div>
+<div class="settings-scroll">
+<div class="settings-tab-panel" id="boardSettings">
+<section class="settings-section"><h3>기본 설정</h3><div class="form-grid">
+<label><span>사이트 제목</span><input id="settingTitle" type="text" value="제리츄 뽑기판"/></label>
+<label><span>안내 문구</span><input id="settingSubtitle" type="text" value="오늘의 행운을 뽑아보세요!"/></label>
+<label><span>전체 칸 수</span><input id="settingTotal" max="300" min="1" type="number" value="100"/></label>
+<label><span>가로 칸 수</span><input id="settingColumns" max="20" min="2" type="number" value="10"/></label>
+<label class="full-width"><span>꽝 표시 문구</span><input id="settingLoseText" maxlength="30" type="text" value="아쉽습니다!"/></label>
+</div></section>
+<section class="settings-section"><div class="section-heading compact"><div><h3>당첨 항목</h3><p class="helper">1등부터 원하는 만큼 추가할 수 있습니다.</p></div><button class="btn secondary small" id="addPrizeBtn">＋ 등수 추가</button></div><div class="prize-editor" id="prizeEditor"></div></section>
+<section class="settings-section summary-section"><div class="summary-box"><span>전체 칸</span><strong id="summaryTotal">100</strong></div><div class="summary-box"><span>당첨 칸</span><strong id="summaryWin">0</strong></div><div class="summary-box"><span>꽝 칸</span><strong id="summaryLose">100</strong></div><div class="setting-error hidden" id="settingError"></div></section>
+</div>
+<div class="settings-tab-panel hidden" id="soopSettings">
+<section class="settings-section broadcast-link-settings">
+<div class="section-heading compact">
+<div>
+<h3>OBS 송출 화면 연동</h3>
+<p class="helper">SOOP 후원 수신 기능은 사용하지 않습니다. 아래 정보는 운영 화면과 OBS 송출 화면을 동기화할 때만 사용됩니다.</p>
+</div>
+</div>
+<div class="form-grid integration-fields">
+<label class="full-width"><span>Apps Script Web App 주소 (/exec)</span><input id="soopExecUrl" placeholder="https://script.google.com/macros/s/.../exec" type="url"/></label>
+<label><span>연동 토큰</span><input id="soopToken" placeholder="연동 토큰" type="password"/></label>
+<label><span>송출 구분 ID</span><input id="soopBjId" placeholder="예: rariruro" type="text"/></label>
+</div>
+<div class="connection-actions"><button class="btn secondary small" id="testConnectionBtn">송출 연결 테스트</button><span class="connection-result" id="connectionTestResult">아직 테스트하지 않았습니다.</span></div>
+</section>
+<section aria-hidden="true" class="legacy-integration-hidden">
+<input id="soopEnabled" type="checkbox"/>
+<select id="soopPollSeconds"><option selected="" value="5">5</option></select>
+<input id="soopMaxDraws" type="number" value="100"/>
+<input checked="" id="kindBalloon" type="checkbox"/>
+<input checked="" id="kindChallenge" type="checkbox"/>
+<input checked="" id="kindBattle" type="checkbox"/>
+<input checked="" name="ruleMode" type="radio" value="ratio"/>
+<div id="ratioRulePanel"><input id="ratioBalloons" type="number" value="500"/><input id="ratioDraws" type="number" value="1"/></div>
+<div class="hidden" id="rangeRulePanel"><div id="rangeRuleEditor"></div><button id="addRangeRuleBtn" type="button">구간 추가</button></div>
+<div class="hidden" id="exactRulePanel"><div id="exactRuleEditor"></div><button id="addExactRuleBtn" type="button">개수 추가</button></div>
+<input id="testBalloonCount" type="number" value="0"/><span id="testDrawResult">0회</span><button id="testAddQueueBtn" type="button">테스트</button>
+</section>
+</div>
+<div class="settings-tab-panel hidden" id="soundSettings">
+<section class="settings-section">
+<div class="toggle-heading">
+<div>
+<h3>결과 효과음</h3>
+<p class="helper">추첨 결과가 송출 화면에 표시되는 순간 결과에 맞는 효과음을 한 번 재생합니다.</p>
+</div>
+<label class="switch"><input checked="" id="soundEnabled" type="checkbox"/><span></span></label>
+</div>
+<div class="sound-volume-row">
+<div>
+<strong>전체 음량</strong>
+<p class="helper">OBS 오디오 믹서에서 최종 음량을 한 번 더 조절할 수 있습니다.</p>
+</div>
+<div class="sound-volume-control">
+<input id="soundVolume" max="100" min="0" step="1" type="range" value="80"/>
+<b id="soundVolumeValue">80%</b>
+</div>
+</div>
+<label class="sound-option-row">
+<input id="soundOperatorEnabled" type="checkbox"/>
+<span><strong>운영 화면에서도 효과음 재생</strong><small>기본값은 꺼짐입니다. 켜면 운영 화면과 OBS에서 동시에 소리가 날 수 있습니다.</small></span>
+</label>
+</section>
+<section class="settings-section">
+<div class="section-heading compact">
+<div>
+<h3>결과별 효과음</h3>
+<p class="helper">당첨 목록의 첫 번째 항목을 최고 등수 효과음으로 처리합니다.</p>
+</div>
+</div>
+<div class="sound-card-list">
+<div class="sound-card first-sound-card">
+<label><input checked="" id="soundFirstEnabled" type="checkbox"/><span><strong>최고 등수</strong><small>화려한 팡파르</small></span></label>
+<button class="btn secondary small" data-sound-test="first" type="button">▶ 테스트</button>
+</div>
+<div class="sound-card win-sound-card">
+<label><input checked="" id="soundWinEnabled" type="checkbox"/><span><strong>일반 당첨</strong><small>밝은 당첨 차임</small></span></label>
+<button class="btn secondary small" data-sound-test="win" type="button">▶ 테스트</button>
+</div>
+<div class="sound-card lose-sound-card">
+<label><input checked="" id="soundLoseEnabled" type="checkbox"/><span><strong>꽝</strong><small>짧고 귀여운 실패음</small></span></label>
+<button class="btn secondary small" data-sound-test="lose" type="button">▶ 테스트</button>
+</div>
+</div>
+<p class="sound-test-status" id="soundTestStatus">테스트 버튼으로 각 효과음을 미리 들어볼 수 있습니다.</p>
+</section>
+<section class="settings-section sound-guide-box">
+<h3>OBS 확인 사항</h3>
+<p>브라우저 소스의 오디오가 OBS 오디오 믹서에 표시되어야 방송으로 송출됩니다. 소스가 음소거되어 있지 않은지 확인해 주세요.</p>
+</section>
+</div>
+</div>
+<div class="modal-actions sticky-actions"><button class="btn secondary" data-close="settingsModal">닫기</button><button class="btn secondary" id="saveSettingsBtn">설정만 저장</button><button class="btn primary" id="generateBoardBtn">새 뽑기판 생성</button></div>
+</div>
+</div>
+<div class="modal-backdrop hidden" id="previewModal"><div class="modal preview-modal"><button class="modal-close" data-close="previewModal">×</button><div class="modal-header"><div><span class="mini-label">ADMIN PREVIEW</span><h2>전체 결과 미리보기</h2></div><button class="btn secondary small" id="exportCsvBtn">CSV 내보내기</button></div><p class="helper">이 화면은 방송에 노출되지 않도록 주의해 주세요.</p><div class="preview-grid" id="previewGrid"></div></div></div>
+<script src="script.js"></script>
 </body>
 </html>
