@@ -303,7 +303,7 @@
         <div class="record-form-grid">
           <input type="date" id="recordDate" />
 
-          <select id="recordType">
+          <select id="recordType" onchange="syncRecordFilterWithInputType()">
             <option value="킬내기">킬내기</option>
             <option value="랜드">랜드</option>
             <option value="공장">공장</option>
@@ -354,6 +354,21 @@
         </div>
 
         <div class="message" id="recordMessage">전적 정보를 입력하고 저장 버튼을 눌러주세요.</div>
+
+        <div class="record-filter-row">
+          <div class="record-filter-title">전적 검색</div>
+          <select id="recordTypeFilter" onchange="renderRecords()">
+            <option value="전체">전체 종류</option>
+            <option value="킬내기">킬내기</option>
+            <option value="랜드">랜드</option>
+            <option value="공장">공장</option>
+            <option value="GKL">GKL</option>
+          </select>
+          <button class="primary" onclick="renderRecords()">검색</button>
+          <button class="secondary" onclick="resetRecordFilter()">전체 보기</button>
+          <span class="record-filter-count" id="recordFilterCount">전체 0개</span>
+        </div>
+
         <div id="recordList" class="record-list"></div>
       </div>
     </div>
