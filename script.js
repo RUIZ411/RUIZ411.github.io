@@ -27,7 +27,7 @@ const db = getFirestore(app);
 const schedulesCollection = collection(db, "schedules");
 const recordsCollection = collection(db, "killRecords");
 
-const ADMIN_CODE = "suweet0305";
+const ADMIN_CODE = "wjdtngltqkqh";
 const SHEET_LINKS_URL = "https://docs.google.com/spreadsheets/d/1p3uUIZUkVGLmHxWQor9-oHmqOBYF5hLEKdBlQhxGv1k/edit?gid=1493639246#gid=1493639246";
 const TEAM_MODE_5V5 = 10;
 const TEAM_MODE_6V6 = 12;
